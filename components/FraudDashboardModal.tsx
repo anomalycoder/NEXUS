@@ -244,15 +244,15 @@ const FraudDashboardModal: React.FC<FraudDashboardModalProps> = ({ accounts }) =
                             <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                                 <PieChart size={16} className="text-purple-500" /> Risk Severity Breakdown
                             </h3>
-                            <div className="flex-1 min-h-[180px] relative">
+                            <div className="flex-1 min-h-[240px] relative">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <RePieChart>
                                         <Pie
                                             data={riskPieData}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={50}
-                                            outerRadius={75}
+                                            innerRadius={60}
+                                            outerRadius={80}
                                             paddingAngle={4}
                                             dataKey="value"
                                             stroke="none"
@@ -262,14 +262,14 @@ const FraudDashboardModal: React.FC<FraudDashboardModalProps> = ({ accounts }) =
                                             ))}
                                         </Pie>
                                         <Tooltip contentStyle={{ backgroundColor: '#1e1e24', borderColor: '#333', borderRadius: '8px' }} />
-                                        <Legend verticalAlign="bottom" height={36} iconSize={8} wrapperStyle={{ fontSize: '9px', opacity: 0.7 }} />
+                                        <Legend verticalAlign="bottom" height={36} iconSize={8} wrapperStyle={{ fontSize: '10px', opacity: 0.8 }} />
                                     </RePieChart>
                                 </ResponsiveContainer>
 
                                 {/* Center Label: Total Fraud Cases */}
-                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-5">
                                     <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{totalFraudCases}</span>
-                                    <span className="text-[9px] uppercase tracking-widest text-slate-500">Fraud Cases</span>
+                                    <span className="text-[10px] uppercase tracking-widest text-slate-500">Fraud Cases</span>
                                 </div>
                             </div>
                         </div>

@@ -170,6 +170,7 @@ def run_pipeline(input_csv, out_dir="backend/output"):
 
     all_ids = final_accounts["account_id"].tolist()
     risk_ids = set(final_accounts[final_accounts["class"] != "NORMAL"]["account_id"])
+    fraud_ids = list(final_accounts[final_accounts["class"] == "FRAUD"]["account_id"])
 
     edges = []
     step = 1
@@ -224,6 +225,35 @@ def run_pipeline(input_csv, out_dir="backend/output"):
 
             # time behavior
             step += random.randint(1, 3 if is_fraud else 6)
+
+    # -------- FRAUD RINGS (EXTRA DENSITY) --------
+    # Explicitly connect fraud accounts to each other to form "rings"
+    if len(fraud_ids) > 1:
+        for src in fraud_ids:
+            # Connect to 3-5 other random fraud accounts
+            ring_size = random.randint(3, 5)
+            # Filter self out
+            peers = [x for x in fraud_ids if x != src]
+            
+            if not peers: continue
+            
+            targets = random.sample(peers, min(ring_size, len(peers)))
+            
+            for dst in targets:
+                key = (src, dst)
+                # We don't check 'key in used' strictly here to ensure density, 
+                # or we just allow multiple edges for different amounts
+                
+                amount = random.uniform(25000, 500000) # Laundering large amounts
+                
+                edges.append({
+                    "src": src,
+                    "dst": dst,
+                    "amount": round(amount, 2),
+                    "step": step,
+                    "fraudEdge": 1
+                })
+                step += 1
 
     links_path = os.path.join(out_dir, "fraud_links.csv")
     pd.DataFrame(edges).to_csv(links_path, index=False)
