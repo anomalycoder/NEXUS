@@ -231,11 +231,12 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNod
                 e.stopPropagation();
                 onNodeClick(node.id);
               }}
+              onMouseDown={(e) => e.stopPropagation()} // Stop drag from starting on nodes
               className="cursor-pointer transition-all duration-500"
               style={{ opacity, pointerEvents: 'all' }}
             >
-              {/* LARGE INVISIBLE HIT AREA - Ensures easy touch/click */}
-              <circle cx={node.x} cy={node.y} r={40} fill="transparent" stroke="none" style={{ pointerEvents: 'all' }} />
+              {/* HIT AREA - Reduced size for precision selection in dense clusters */}
+              <circle cx={node.x} cy={node.y} r={12} fill="transparent" stroke="none" style={{ pointerEvents: 'all' }} />
 
               {/* Core Node with Blink Animation for Critical */}
               <circle
