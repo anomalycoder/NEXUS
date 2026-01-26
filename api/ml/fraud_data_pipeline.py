@@ -41,17 +41,35 @@ def run_pipeline(input_csv, out_dir="backend/output"):
     df = pd.read_csv(input_csv)
 
     # --------------------------------------------------
+    # 0. CLEANUP & NORMALIZATION
+    # --------------------------------------------------
+    # Strip whitespace from headers
+    df.columns = [c.strip() for c in df.columns]
+    
+    # Ensure critical columns are numeric if they exist
+    for col in ["amount", "oldbalanceOrg", "newbalanceOrig"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+
+    # --------------------------------------------------
     # 1. ENSURE RAW TRANSACTION FIELDS
     # --------------------------------------------------
     df = ensure_column(df, "nameOrig", lambda n: [f"ACC_{i}" for i in range(n)])
     df = ensure_column(df, "nameDest", lambda n: [f"ACC_{random.randint(0, n)}" for _ in range(n)])
     df = ensure_column(df, "amount", lambda n: np.random.lognormal(4, 1, n))
     df = ensure_column(df, "oldbalanceOrg", lambda n: np.random.uniform(0, 1e5, n))
+    
+    # Re-ensure numeric after ensure_column in case it was created or modified
+    df["amount"] = pd.to_numeric(df["amount"], errors='coerce').fillna(0)
+    df["oldbalanceOrg"] = pd.to_numeric(df["oldbalanceOrg"], errors='coerce').fillna(0)
+
     df = ensure_column(
         df,
         "newbalanceOrig",
         lambda n: df["oldbalanceOrg"] - df["amount"] * np.random.uniform(0.1, 0.9, n)
     )
+    
+    df["newbalanceOrig"] = pd.to_numeric(df["newbalanceOrig"], errors='coerce').fillna(0)
 
     # --------------------------------------------------
     # 2. FEATURE ENGINEERING

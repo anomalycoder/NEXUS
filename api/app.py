@@ -123,7 +123,9 @@ def insert_into_neo4j(accounts_csv, links_csv):
 # DEBUG HELPER
 # ======================================================
 def log_error_to_file(e):
-    with open("backend_errors.log", "a") as f:
+    # Use absolute path for log file to ensure we can find it
+    log_path = os.path.join(BASE_DIR, "backend_errors.log")
+    with open(log_path, "a") as f:
         f.write(f"\n\n[{pd.Timestamp.now()}] ERROR:\n")
         f.write(str(e))
         f.write("\nTraceback:\n")
