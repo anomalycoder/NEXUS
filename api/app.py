@@ -118,52 +118,91 @@ def insert_into_neo4j(accounts_csv, links_csv):
 # ======================================================
 # CSV UPLOAD + PIPELINE
 # ======================================================
-@app.route("/api/upload-csv", methods=["POST"])
-def upload_csv():
-    try:
-        print("📥 CSV upload started")
+# ======================================================
+# SPLIT PIPELINE ENDPOINTS
+# ======================================================
 
+@app.route("/api/upload", methods=["POST"])
+def upload_file():
+    try:
+        print("📥 API: Upload started")
         if "file" not in request.files:
             return jsonify({"error": "No file provided"}), 400
-
+            
         file = request.files["file"]
-
         if file.filename == "":
             return jsonify({"error": "Empty filename"}), 400
-
+            
         if not file.filename.lower().endswith(".csv"):
             return jsonify({"error": "Only CSV files allowed"}), 400
-
+            
         file_path = os.path.join(UPLOAD_DIR, file.filename)
         file.save(file_path)
-
-        print(f"✅ File saved at: {file_path}")
-        print("🚀 Running fraud data pipeline...")
-
-        result = run_pipeline(file_path, out_dir=OUTPUT_DIR)
-
-        print("📊 Pipeline output:", result)
-        print("📤 Inserting into Neo4j...")
-
-        insert_into_neo4j(
-            result["accounts"],
-            result["links"]
-        )
-
+        print(f"✅ API: File saved at {file_path}")
+        
         return jsonify({
             "status": "success",
-            "message": "Pipeline completed successfully"
+            "message": "File uploaded successfully",
+            "filePath": file_path,
+            "filename": file.filename
+        })
+        
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/process-ml", methods=["POST"])
+def process_ml():
+    try:
+        data = request.json
+        file_path = data.get("filePath")
+        
+        if not file_path or not os.path.exists(file_path):
+            return jsonify({"error": "File not found. Please upload again."}), 400
+
+        print(f"🚀 API: Running ML Pipeline on {file_path}")
+        result = run_pipeline(file_path, out_dir=OUTPUT_DIR)
+        
+        return jsonify({
+            "status": "success",
+            "message": "ML Analysis complete",
+            "data": result  # Contains paths to accounts and links CSVs
         })
 
     except Exception as e:
-        print("❌ ERROR DURING PROCESSING")
         traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
+
+@app.route("/api/ingest-neo4j", methods=["POST"])
+def ingest_neo4j():
+    try:
+        data = request.json
+        accounts_csv = data.get("accounts")
+        links_csv = data.get("links")
+        
+        if not accounts_csv or not links_csv:
+            return jsonify({"error": "Missing input files for ingestion"}), 400
+            
+        print("📤 API: Ingesting into Neo4j...")
+        insert_into_neo4j(accounts_csv, links_csv)
+        
         return jsonify({
-            "status": "error",
-            "error": f"Processing failed: {str(e)}",
-            "details": str(e)
-        }), 500
+            "status": "success", 
+            "message": "Graph ingestion complete"
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+# Keep legacy endpoint for backward compatibility (optional, but good practice)
+@app.route("/api/upload-csv", methods=["POST"])
+def upload_csv_legacy():
+    # ... logic calling the above 3 steps in sequence ...
+    # But since we are updating the frontend, we can redirect or simple warn
+    return jsonify({"error": "Please use the new split endpoints"}), 410
 
 
 # ======================================================

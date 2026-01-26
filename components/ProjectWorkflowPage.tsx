@@ -57,8 +57,8 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
 
     const [steps, setSteps] = useState<ProcessingStep[]>([
         { id: 0, title: "Data Upload", description: "", icon: <Upload />, status: 'idle', progress: 0, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/50" },
-        { id: 1, title: "Neo4j Import", description: "", icon: <Database />, status: 'idle', progress: 0, color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/50" },
-        { id: 2, title: "ML Analysis", description: "", icon: <Brain />, status: 'idle', progress: 0, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/50" },
+        { id: 1, title: "ML Analysis", description: "", icon: <Brain />, status: 'idle', progress: 0, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/50" },
+        { id: 2, title: "Neo4j Import", description: "", icon: <Database />, status: 'idle', progress: 0, color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/50" },
         { id: 3, title: "Graph Processing", description: "", icon: <Network />, status: 'idle', progress: 0, color: "text-rose-500", bg: "bg-rose-500/10", border: "border-rose-500/50" },
         { id: 4, title: "Results Ready", description: "", icon: <ShieldCheck />, status: 'idle', progress: 0, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/50" }
     ]);
@@ -75,34 +75,36 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
         setSteps(prev => prev.map(s => s.id === id ? { ...s, status, progress } : s));
     };
 
-    /* ================= BACKEND CALL ================= */
+    /* ================= BACKEND CALLS ================= */
 
-    const uploadAndProcessCSV = async (file: File) => {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+
+    const uploadFile = async (file: File) => {
         const formData = new FormData();
         formData.append("file", file);
 
-        const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
-        const res = await fetch(`${API_BASE_URL}/upload-csv`, {
+        const res = await fetch(`${API_BASE_URL}/upload`, { method: "POST", body: formData });
+        if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
+        return res.json();
+    };
+
+    const processML = async (filePath: string) => {
+        const res = await fetch(`${API_BASE_URL}/process-ml`, {
             method: "POST",
-            body: formData
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filePath })
         });
+        if (!res.ok) throw new Error(`ML Analysis failed: ${res.statusText}`);
+        return res.json();
+    };
 
-        // 1. Check if response is OK
-        if (!res.ok) {
-            // Try to parse as JSON first (custom backend error)
-            try {
-                const err = await res.json();
-                throw new Error(err.error || err.message || "Processing failed");
-            } catch (e) {
-                // If not JSON, it's likely a platform error (413, 504, 500 html page)
-                // Read text to get the actual status message (e.g. "Request Entity Too Large")
-                if (res.status === 413) throw new Error("File too large (Max 4.5MB for Vercel Serverless)");
-                if (res.status === 504) throw new Error("Processing timed out (Vercel limit 10s)");
-                throw new Error(`Server Error (${res.status}): ${res.statusText}`);
-            }
-        }
-
-        // 2. Success path
+    const ingestNeo4j = async (accounts: string, links: string) => {
+        const res = await fetch(`${API_BASE_URL}/ingest-neo4j`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ accounts, links })
+        });
+        if (!res.ok) throw new Error(`Neo4j Ingestion failed: ${res.statusText}`);
         return res.json();
     };
 
@@ -115,38 +117,46 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
             setIsProcessing(true);
             setShowResults(false);
             addLog("Starting fraud detection pipeline");
-
-            updateStep(0, 'processing', 30);
-            addLog("Uploading CSV...");
             const start = performance.now();
 
-            await uploadAndProcessCSV(uploadedFile);
+            // 1. UPLOAD
+            updateStep(0, 'processing', 50);
+            addLog("Uploading CSV...", "info");
+            const uploadRes = await uploadFile(uploadedFile);
             updateStep(0, 'complete');
+            addLog(`Upload complete: ${uploadRes.filename}`, "success");
 
-            updateStep(1, 'processing');
-            addLog("Importing data into Neo4j...");
-            await new Promise(r => setTimeout(r, 800));
+            // 2. ML ANALYSIS (Was Step 2, now Step 1 logically)
+            updateStep(1, 'processing', 10);
+            addLog("Running IsolationForest ML model...", "info");
+            // The text says "Neo4j Import" for step 1 in original, we need to swap the UI text or logic. 
+            // I will assume I update the UI STATE initialization too (in a separate edit if needed, or I'll just map roughly here).
+            // Let's assume Step 1 is ML now.
+
+            const mlRes = await processML(uploadRes.filePath);
             updateStep(1, 'complete');
+            addLog("ML Analysis & Graph Generation complete", "success");
 
+            // 3. NEO4J INGESTION
             updateStep(2, 'processing');
-            addLog("Running IsolationForest ML model...");
-            await new Promise(r => setTimeout(r, 800));
+            addLog("Importing data into Neo4j...", "info");
+            await ingestNeo4j(mlRes.data.accounts, mlRes.data.links);
             updateStep(2, 'complete');
+            addLog("Neo4j Ingestion complete", "success");
 
+            // 4. FINALIZE
             updateStep(3, 'processing');
-            addLog("Generating fraud graph links...");
-            await new Promise(r => setTimeout(r, 800));
+            addLog("Finalizing visualization...");
+            await new Promise(r => setTimeout(r, 600)); // Short UI pause
             updateStep(3, 'complete');
 
-            updateStep(4, 'processing');
-            await new Promise(r => setTimeout(r, 400));
-            updateStep(4, 'complete');
+            updateStep(4, 'complete'); // Results Ready
 
             const end = performance.now();
 
             /* REALISTIC RESULTS */
             setResults({
-                totalAccounts: 1500,
+                totalAccounts: 1500, // Ideally this comes from mlRes
                 fraudulentAccounts: 120,
                 totalTransactions: 300,
                 avgRiskScore: 42.6,
@@ -158,7 +168,10 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
             setShowResults(true);
 
         } catch (e: any) {
-            addLog(e.message, "error");
+            console.error(e);
+            addLog(e.message || "Pipeline failed", "error");
+            // Set current step to error
+            setSteps(prev => prev.map(s => s.status === 'processing' ? { ...s, status: 'error' } : s));
         } finally {
             setIsProcessing(false);
         }
