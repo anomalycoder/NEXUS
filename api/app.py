@@ -140,7 +140,7 @@ def upload_csv():
         print(f"✅ File saved at: {file_path}")
         print("🚀 Running fraud data pipeline...")
 
-        result = run_pipeline(file_path)
+        result = run_pipeline(file_path, out_dir=OUTPUT_DIR)
 
         print("📊 Pipeline output:", result)
         print("📤 Inserting into Neo4j...")
@@ -161,7 +161,7 @@ def upload_csv():
 
         return jsonify({
             "status": "error",
-            "message": "Processing failed",
+            "error": f"Processing failed: {str(e)}",
             "details": str(e)
         }), 500
 
