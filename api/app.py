@@ -123,13 +123,32 @@ def insert_into_neo4j(accounts_csv, links_csv):
 # DEBUG HELPER
 # ======================================================
 def log_error_to_file(e):
-    # Use absolute path for log file to ensure we can find it
-    log_path = os.path.join(BASE_DIR, "backend_errors.log")
-    with open(log_path, "a") as f:
-        f.write(f"\n\n[{pd.Timestamp.now()}] ERROR:\n")
-        f.write(str(e))
-        f.write("\nTraceback:\n")
-        traceback.print_exc(file=f)
+    try:
+        # Explicit absolute path
+        log_dir = os.path.dirname(os.path.abspath(__file__))
+        log_path = os.path.join(log_dir, "backend_errors.log")
+        
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(f"\n\n[{pd.Timestamp.now()}] ERROR:\n")
+            f.write(f"Type: {type(e).__name__}\n")
+            f.write(f"Message: {str(e)}\n")
+            f.write("Traceback:\n")
+            traceback.print_exc(file=f)
+    except Exception as log_err:
+        print(f"Failed to write log: {log_err}")
+
+# ... (rest of code)
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    log_error_to_file(e)
+    # traceback.print_exc() # Already logged
+    return jsonify({
+        "status": "error",
+        "message": "Internal server error",
+        "error": str(e),
+        "details": traceback.format_exc()
+    }), 500
 
 # ======================================================
 # SPLIT PIPELINE ENDPOINTS
@@ -279,16 +298,7 @@ def graph():
 # ======================================================
 # RUN SERVER
 # ======================================================
+# Error handler moved to top
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
 
-@app.errorhandler(Exception)
-def handle_exception(e):
-    import traceback
-    traceback.print_exc()
-
-    return jsonify({
-        "status": "error",
-        "message": "Internal server error",
-        "details": str(e)
-    }), 500
