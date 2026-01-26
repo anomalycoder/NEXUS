@@ -71,48 +71,66 @@ def health():
 # NEO4J INGESTION
 # ======================================================
 def insert_into_neo4j(accounts_csv, links_csv):
-    with driver.session(database=NEO4J_DB) as session:
+    try:
+        if not os.path.exists(accounts_csv) or not os.path.exists(links_csv):
+            raise FileNotFoundError("Processed CSV files not found for ingestion.")
 
-        print("🧹 Clearing old Neo4j data")
-        session.run("MATCH (n) DETACH DELETE n")
+        with driver.session(database=NEO4J_DB) as session:
 
-        # -----------------------------
-        # INSERT ACCOUNT NODES
-        # -----------------------------
-        accounts = pd.read_csv(accounts_csv)
-        print(f"📥 Inserting {len(accounts)} accounts")
+            print("🧹 Clearing old Neo4j data")
+            session.run("MATCH (n) DETACH DELETE n")
 
-        session.run("""
-        UNWIND $rows AS row
-        MERGE (a:Account {id: row.account_id})
-        SET
-          a.total_amount = row.total_amount,
-          a.avg_amount = row.avg_amount,
-          a.tx_count = row.tx_count,
-          a.avg_balance_diff = row.avg_balance_diff,
-          a.zero_balance_count = row.zero_balance_count,
-          a.riskScore = row.riskScore,
-          a.mlClass = row.class
-        """, rows=accounts.to_dict("records"))
+            # -----------------------------
+            # INSERT ACCOUNT NODES
+            # -----------------------------
+            accounts = pd.read_csv(accounts_csv)
+            # Neo4j cannot handle NaN/Inf in parameters, sanitize it
+            accounts = accounts.fillna(0)
+            
+            if not accounts.empty:
+                print(f"📥 Inserting {len(accounts)} accounts")
+                session.run("""
+                UNWIND $rows AS row
+                MERGE (a:Account {id: row.account_id})
+                SET
+                a.total_amount = row.total_amount,
+                a.avg_amount = row.avg_amount,
+                a.tx_count = row.tx_count,
+                a.avg_balance_diff = row.avg_balance_diff,
+                a.zero_balance_count = row.zero_balance_count,
+                a.riskScore = row.riskScore,
+                a.mlClass = row.class
+                """, rows=accounts.to_dict("records"))
+            else:
+                print("⚠️ Accounts CSV was empty")
 
-        # -----------------------------
-        # INSERT RELATIONSHIPS
-        # -----------------------------
-        links = pd.read_csv(links_csv)
-        print(f"🔗 Inserting {len(links)} relationships")
+            # -----------------------------
+            # INSERT RELATIONSHIPS
+            # -----------------------------
+            links = pd.read_csv(links_csv)
+            links = links.fillna(0)
+            
+            if not links.empty:
+                print(f"🔗 Inserting {len(links)} relationships")
+                session.run("""
+                UNWIND $rows AS row
+                MATCH (src:Account {id: row.src})
+                MATCH (dst:Account {id: row.dst})
+                CREATE (src)-[:TRANSFERRED_TO {
+                amount: row.amount,
+                step: row.step,
+                fraudEdge: row.fraudEdge
+                }]->(dst)
+                """, rows=links.to_dict("records"))
+            else:
+                print("⚠️ Links CSV was empty")
 
-        session.run("""
-        UNWIND $rows AS row
-        MATCH (src:Account {id: row.src})
-        MATCH (dst:Account {id: row.dst})
-        CREATE (src)-[:TRANSFERRED_TO {
-          amount: row.amount,
-          step: row.step,
-          fraudEdge: row.fraudEdge
-        }]->(dst)
-        """, rows=links.to_dict("records"))
+            print("✅ Neo4j ingestion complete")
 
-        print("✅ Neo4j ingestion complete")
+    except Exception as e:
+        print(f"❌ Neo4j Ingestion Error: {str(e)}")
+        log_error_to_file(e)
+        raise e  # Re-raise to be caught by the API route handler
 
 
 # ======================================================

@@ -152,18 +152,18 @@ const App: React.FC = () => {
                             entity: n.id.startsWith('M') ? 'Merchant' : 'Customer',
                             type: n.id.startsWith('M') ? 'Corporate' : 'Individual',
                             riskScore: n.riskScore ? parseFloat(n.riskScore.toFixed(2)) : (n.graphScore * 10),
-                            status: (n.riskScore > 80 || n.graphClass === 'AT_RISK') ? 'Flagged' : 'Safe',
+                            status: (n.riskScore > 80 || n.mlClass === 'AT_RISK' || n.mlClass === 'FRAUD') ? 'Flagged' : 'Safe',
 
                             volume: `₹${stats.totalVol.toFixed(2)}`,
                             volumeValue: stats.totalVol,
 
-                            flagCount: n.graphScore > 2 ? n.graphScore : 0,
+                            flagCount: n.graphScore > 2 ? n.graphScore : 0, // graphScore might also be undefined, but keeping as is if used elsewhere
                             lastActive: sortedHistory.length > 0 ? sortedHistory[0].date : 'N/A',
 
                             x: x,
                             y: y,
 
-                            isRingMember: n.graphClass === 'AT_RISK',
+                            isRingMember: n.mlClass === 'AT_RISK' || n.mlClass === 'FRAUD',
                             connections: Array.from(stats.neighbors),
                             history: sortedHistory.length > 0 ? sortedHistory : generateHistory(n.riskScore > 50) // Fallback
                         };

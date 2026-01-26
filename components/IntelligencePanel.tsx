@@ -76,7 +76,7 @@ const IntelligencePanel: React.FC<IntelligencePanelProps> = ({ account, onInvest
 
         <div className="space-y-3">
           <DataRow icon={<Activity size={14} />} label="Net Volume" value={account.volume} />
-          <DataRow icon={<ArrowUpRight size={14} />} label="Max Transaction" value={`₹${Math.max(...account.history.map(h => h.amount), 0).toFixed(2)}`} />
+          <DataRow icon={<ArrowUpRight size={14} />} label="Max Transaction" value={`₹${Math.max(0, ...account.history.map(h => h.amount)).toFixed(2)}`} />
           <DataRow icon={<Activity size={14} />} label="Avg Transaction" value={`₹${(account.history.reduce((a, b) => a + b.amount, 0) / (account.history.length || 1)).toFixed(2)}`} />
           <DataRow icon={<ShieldAlert size={14} />} label="Flagged Txns" value={`${account.history.filter(h => h.isSpike).length}`} />
         </div>

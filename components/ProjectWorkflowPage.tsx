@@ -125,6 +125,11 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
         try {
             setIsProcessing(true);
             setShowResults(false);
+            setLogs([]); // Clear logs for new run
+
+            // Reset steps to idle
+            setSteps(prev => prev.map(s => ({ ...s, status: 'idle', progress: 0 })));
+
             addLog("Starting fraud detection pipeline");
             const start = performance.now();
 
@@ -135,12 +140,9 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
             updateStep(0, 'complete');
             addLog(`Upload complete: ${uploadRes.filename}`, "success");
 
-            // 2. ML ANALYSIS (Was Step 2, now Step 1 logically)
+            // 2. ML ANALYSIS
             updateStep(1, 'processing', 10);
             addLog("Running IsolationForest ML model...", "info");
-            // The text says "Neo4j Import" for step 1 in original, we need to swap the UI text or logic. 
-            // I will assume I update the UI STATE initialization too (in a separate edit if needed, or I'll just map roughly here).
-            // Let's assume Step 1 is ML now.
 
             const mlRes = await processML(uploadRes.filePath);
             updateStep(1, 'complete');
@@ -179,7 +181,7 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
         } catch (e: any) {
             console.error(e);
             addLog(e.message || "Pipeline failed", "error");
-            // Set current step to error
+            // Set current processing step to error
             setSteps(prev => prev.map(s => s.status === 'processing' ? { ...s, status: 'error' } : s));
         } finally {
             setIsProcessing(false);
@@ -235,11 +237,51 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
                 <button
                     onClick={startPipeline}
                     disabled={!uploadedFile || isProcessing}
-                    className="px-8 py-3 bg-indigo-600 text-white rounded-xl flex gap-2 items-center disabled:opacity-50"
+                    className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex gap-2 items-center disabled:opacity-50 transition-all shadow-lg hover:shadow-indigo-500/25 font-bold"
                 >
-                    {isProcessing ? <Loader2 className="animate-spin" /> : <Play />}
+                    {isProcessing ? <Loader2 className="animate-spin" /> : <Play fill="currentColor" />}
                     Start Analysis
                 </button>
+            </div>
+
+            {/* STEPS VISUALIZATION */}
+            <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
+                {steps.map((step, idx) => (
+                    <div
+                        key={step.id}
+                        className={`
+                            relative p-4 rounded-xl border flex flex-col items-center justify-center gap-3 text-center transition-all duration-500
+                            ${step.status === 'processing' ? 'bg-white dark:bg-neutral-800 border-indigo-500 ring-2 ring-indigo-500/20 scale-105 shadow-xl z-10' : ''}
+                            ${step.status === 'complete' ? 'bg-white dark:bg-neutral-900 border-emerald-500/50' : ''}
+                            ${step.status === 'error' ? 'bg-red-50 dark:bg-red-900/10 border-red-500' : ''}
+                            ${step.status === 'idle' ? 'bg-white/50 dark:bg-neutral-900/50 border-transparent opacity-60 grayscale' : ''}
+                        `}
+                    >
+                        {/* Connecting Line (Desktop) */}
+                        {idx < steps.length - 1 && (
+                            <div className="hidden md:block absolute top-1/2 -right-[calc(1rem+2px)] w-4 h-[2px] bg-slate-200 dark:bg-neutral-800 z-0" />
+                        )}
+
+                        <div className={`p-3 rounded-full ${step.status === 'processing' ? 'animate-bounce' : ''} ${step.status === 'complete' ? 'bg-emerald-100 text-emerald-600' : step.bg} ${step.color}`}>
+                            {step.status === 'complete' ? <CheckCircle2 size={20} /> :
+                                step.status === 'error' ? <X size={20} /> :
+                                    step.status === 'processing' ? <Loader2 size={20} className="animate-spin" /> :
+                                        step.icon}
+                        </div>
+
+                        <div>
+                            <div className="text-xs font-bold uppercase tracking-wider mb-1 opacity-70">Step {idx + 1}</div>
+                            <div className="font-bold text-sm">{step.title}</div>
+                        </div>
+
+                        {/* Processing Bar */}
+                        {step.status === 'processing' && (
+                            <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden mt-2">
+                                <div className="h-full bg-indigo-500 animate-[loading_1s_ease-in-out_infinite]" style={{ width: '50%' }} />
+                            </div>
+                        )}
+                    </div>
+                ))}
             </div>
 
             {/* LOGS */}

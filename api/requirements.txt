@@ -1,9 +1,7 @@
-fastapi
-uvicorn
-pandas
-numpy
-
-neo4j
 flask
 flask-cors
+neo4j
+pandas
+numpy
 python-dotenv
+gunicorn

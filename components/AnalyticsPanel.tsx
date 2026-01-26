@@ -127,7 +127,7 @@ const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ accounts, selectedId })
                 {/* COL 3: Connected Nodes (Fixed Width) */}
                 <div className="w-72 bg-slate-50 dark:bg-black/20 flex flex-col">
                     <div className="p-3 border-b border-slate-200 dark:border-white/5 flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-slate-500 dark:text-white/40 uppercase tracking-widest">Network Links (Potential Nodes) ({neighbors.length})</span>
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-white/40 uppercase tracking-widest">Direct Connections ({neighbors.length})</span>
                         <Share2 size={12} className="text-slate-400 dark:text-white/20" />
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">

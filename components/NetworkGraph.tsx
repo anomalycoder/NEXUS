@@ -217,12 +217,26 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNod
           const isCritical = node.riskScore > 80;
           const color = getNodeColor(node);
 
-          // Opacity Logic
-          const opacity = selectedId ? (isSelected || isNeighbor ? 1 : 0.5) : 1;
-
           // LOD Logic: Show labels if zoomed in significantly (viewBox width < 800)
           const currentZoomWidth = parseFloat(viewBox.split(' ')[2]);
           const showLabel = currentZoomWidth < 800;
+
+          const isHovered = hoveredId === node.id;
+          const isHoverNeighbor = hoveredId ? accounts.find(a => a.id === hoveredId)?.connections.includes(node.id) : false;
+
+          // Opacity Logic: 
+          // If Selection Active: Focus on Selection.
+          // If No Selection but Hover: Focus on Hover.
+          // Else: 1
+          let opacity = 1;
+          if (selectedId) {
+            opacity = (isSelected || isNeighbor) ? 1 : 0.2;
+          } else if (hoveredId) {
+            opacity = (isHovered || isHoverNeighbor) ? 1 : 0.2;
+          }
+
+          // Highlighting
+          const isHighlight = isSelected || isHovered;
 
           return (
             <g
@@ -231,59 +245,67 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNod
                 e.stopPropagation();
                 onNodeClick(node.id);
               }}
-              onMouseDown={(e) => e.stopPropagation()} // Stop drag from starting on nodes
-              className="cursor-pointer transition-all duration-500"
+              onMouseEnter={() => setHoveredId(node.id)}
+              onMouseLeave={() => setHoveredId(null)}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="cursor-pointer transition-all duration-300 ease-out"
               style={{ opacity, pointerEvents: 'all' }}
             >
-              {/* HIT AREA - Reduced size for precision selection in dense clusters */}
-              <circle cx={node.x} cy={node.y} r={12} fill="transparent" stroke="none" style={{ pointerEvents: 'all' }} />
+              {/* HIT AREA */}
+              <circle cx={node.x} cy={node.y} r={20} fill="transparent" stroke="none" style={{ pointerEvents: 'all' }} />
 
-              {/* Core Node with Blink Animation for Critical */}
+              {/* Core Node */}
               <circle
                 cx={node.x}
                 cy={node.y}
-                r={isCritical ? 7 : 5}
+                r={isCritical ? 8 : 5}
                 fill={isCritical ? color : isDarkMode ? '#000' : '#fff'}
                 stroke={color}
-                strokeWidth={isSelected ? 3 : 2}
+                strokeWidth={isHighlight ? 3 : 2}
                 className={isCritical ? "blink-critical" : "transition-all duration-300"}
-                style={{ pointerEvents: 'none' }}
+                style={{ pointerEvents: 'none', filter: isHighlight ? `drop-shadow(0 0 8px ${color})` : 'none' }}
               />
 
-              {/* LOD Label (Only visible when zoomed in) */}
-              {showLabel && (
-                <text
-                  x={node.x}
-                  y={node.y + 15}
-                  textAnchor="middle"
-                  fill={color}
-                  fontSize="6"
-                  fontWeight="bold"
-                  className="pointer-events-none select-none drop-shadow-md"
-                >
-                  {node.name.length > 10 ? node.name.slice(0, 8) + '...' : node.name}
-                </text>
+              {/* Hover/Selection Label */}
+              {(isHovered || showLabel) && (
+                <g style={{ pointerEvents: 'none' }}>
+                  <rect
+                    x={node.x - 40}
+                    y={node.y + 12}
+                    width="80"
+                    height="20"
+                    rx="4"
+                    fill={isDarkMode ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.9)"}
+                    className="backdrop-blur-sm"
+                  />
+                  <text
+                    x={node.x}
+                    y={node.y + 25}
+                    textAnchor="middle"
+                    fill={color}
+                    fontSize="10"
+                    fontWeight="bold"
+                    className="select-none"
+                  >
+                    {node.name.length > 12 ? node.name.slice(0, 10) + '...' : node.name}
+                  </text>
+                </g>
               )}
 
-              {/* Glow Effect Circle - Show for Critical OR Neighbors when selected OR Selected Node */}
+              {/* Glow Effects */}
               <circle
                 cx={node.x}
                 cy={node.y}
-                r={isCritical ? 20 : (isNeighbor || isSelected) ? 15 : 10}
+                r={isCritical ? 20 : (isNeighbor || isSelected || isHovered || isHoverNeighbor) ? 15 : 10}
                 fill={color}
-                opacity={isCritical ? 0.4 : (isNeighbor || isSelected) ? 0.3 : 0.15}
-                className={isCritical || isNeighbor || isSelected ? "blink-critical" : ""}
+                opacity={isCritical ? 0.4 : (isHighlight || isNeighbor || isHoverNeighbor) ? 0.3 : 0}
+                className={isCritical ? "blink-critical" : ""}
                 style={{ pointerEvents: 'none' }}
               />
 
-              {/* Selection Ring */}
-              {isSelected && (
-                <circle cx={node.x} cy={node.y} r={28} fill="none" stroke={isDarkMode ? "#fff" : "#000"} strokeWidth="1" strokeDasharray="4 2" className="animate-[spin_10s_linear_infinite]" opacity="0.8" style={{ pointerEvents: 'none' }} />
-              )}
-
-              {/* Neighbor Connection Ring */}
-              {isNeighbor && (
-                <circle cx={node.x} cy={node.y} r={18} fill="none" stroke={color} strokeWidth="1" opacity="0.6" className="animate-pulse" style={{ pointerEvents: 'none' }} />
+              {/* Rings */}
+              {isHighlight && (
+                <circle cx={node.x} cy={node.y} r={24} fill="none" stroke={color} strokeWidth="1" strokeDasharray="4 2" className="animate-[spin_4s_linear_infinite]" opacity="0.6" style={{ pointerEvents: 'none' }} />
               )}
             </g>
           );

@@ -34,9 +34,14 @@ def run_pipeline(input_csv, out_dir="backend/output"):
     print("🚀 fraud_data_pipeline started")
     print("📂 Input CSV:", input_csv)
 
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    out_dir = os.path.join(BASE_DIR, out_dir)
+    # 1. Resolve Output Directory
+    # If out_dir is not absolute, make it relative to the parent of this script (api/)
+    if not os.path.isabs(out_dir):
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        out_dir = os.path.join(BASE_DIR, out_dir)
+    
     os.makedirs(out_dir, exist_ok=True)
+    print("📂 Output Dir:", out_dir)
 
     df = pd.read_csv(input_csv)
 
