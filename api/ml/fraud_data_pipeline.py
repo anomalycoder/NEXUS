@@ -175,7 +175,11 @@ def run_pipeline(input_csv, out_dir="backend/output"):
     # --------------------------------------------------
     # 5. LIMIT ACCOUNT COUNT
     # --------------------------------------------------
+    # Ensure target_size doesn't exceed available population
     target_size = random.randint(MIN_ROWS, MAX_ROWS)
+    if len(accounts) < target_size:
+        target_size = len(accounts)
+        
     final_accounts = accounts.sample(n=target_size, random_state=SEED).reset_index(drop=True)
 
     accounts_path = os.path.join(out_dir, "final_accounts.csv")
