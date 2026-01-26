@@ -87,11 +87,22 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
             body: formData
         });
 
+        // 1. Check if response is OK
         if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || "Processing failed");
+            // Try to parse as JSON first (custom backend error)
+            try {
+                const err = await res.json();
+                throw new Error(err.error || err.message || "Processing failed");
+            } catch (e) {
+                // If not JSON, it's likely a platform error (413, 504, 500 html page)
+                // Read text to get the actual status message (e.g. "Request Entity Too Large")
+                if (res.status === 413) throw new Error("File too large (Max 4.5MB for Vercel Serverless)");
+                if (res.status === 504) throw new Error("Processing timed out (Vercel limit 10s)");
+                throw new Error(`Server Error (${res.status}): ${res.statusText}`);
+            }
         }
 
+        // 2. Success path
         return res.json();
     };
 
