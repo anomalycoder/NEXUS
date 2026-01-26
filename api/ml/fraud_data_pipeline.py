@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 import random
 import os
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import IsolationForest
+# from sklearn.preprocessing import StandardScaler
+# from sklearn.ensemble import IsolationForest
 
 # ======================================================
 # CONFIG
@@ -79,24 +79,44 @@ def run_pipeline(input_csv, out_dir="backend/output"):
     accounts.reset_index(inplace=True)
     accounts.rename(columns={"nameOrig": "account_id"}, inplace=True)
 
+# --------------------------------------------------
+    # 4. STATISTICAL RISK SCORING (Lightweight)
     # --------------------------------------------------
-    # 4. ML RISK SCORING
-    # --------------------------------------------------
-    X = accounts.drop(columns=["account_id"])
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    # Replaced IsolationForest with robust Z-score analysis to save ~100MB
+    # and fit within Serverless limits.
+    
+    # Calculate Z-scores for key features
+    features = ["total_amount", "tx_count", "avg_balance_diff", "zero_balance_count"]
+    
+    for col in features:
+        mean = accounts[col].mean()
+        std = accounts[col].std()
+        if std == 0:
+            accounts[f"{col}_z"] = 0
+        else:
+            accounts[f"{col}_z"] = (accounts[col] - mean) / std
 
-    model = IsolationForest(
-        n_estimators=300,
-        contamination=0.1,
-        random_state=SEED,
-        n_jobs=-1
+    # Composite risk score (weighted avg of z-scores)
+    # Weighted towards high amounts and suspicious balance changes
+    accounts["raw_score"] = (
+        accounts["total_amount_z"] * 0.4 + 
+        accounts["avg_balance_diff_z"] * 0.3 + 
+        accounts["tx_count_z"] * 0.2 + 
+        accounts["zero_balance_count_z"] * 0.1
     )
-    model.fit(X_scaled)
 
-    raw = model.decision_function(X_scaled)
-    risk = 1 - (raw - raw.min()) / (raw.max() - raw.min())
-    accounts["riskScore"] = (risk * 100).round(2)
+    # Normalize to 0-100 range using Min-Max scaling
+    min_score = accounts["raw_score"].min()
+    max_score = accounts["raw_score"].max()
+    
+    if max_score > min_score:
+        accounts["riskScore"] = ((accounts["raw_score"] - min_score) / (max_score - min_score) * 100).round(2)
+    else:
+        accounts["riskScore"] = 50.0  # Default if no variance
+
+    # Cleanup temp columns
+    accounts.drop(columns=[f"{c}_z" for c in features] + ["raw_score"], inplace=True)
+
 
     def classify(score):
         if score >= 80:

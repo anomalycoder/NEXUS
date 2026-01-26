@@ -2,8 +2,7 @@ fastapi
 uvicorn
 pandas
 numpy
-scikit-learn
-joblib
+
 neo4j
 flask
 flask-cors
