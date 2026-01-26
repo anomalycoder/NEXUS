@@ -57,7 +57,7 @@ driver = GraphDatabase.driver(
     auth=(NEO4J_USER, NEO4J_PASSWORD)
 )
 
-NEO4J_DB = "fraudDB"
+NEO4J_DB = os.getenv("NEO4J_DB", "neo4j")
 
 # ======================================================
 # HEALTH CHECK
