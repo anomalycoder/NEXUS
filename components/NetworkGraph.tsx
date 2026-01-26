@@ -13,6 +13,8 @@ interface NetworkGraphProps {
 const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNodeClick, isDarkMode, currency }) => {
   const [viewBox, setViewBox] = useState("0 0 1600 900");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     if (selectedId) {
@@ -93,10 +95,39 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNod
       {/* Subtle Grid (Optional - Re-adding very faintly if desired, but user asked to remove. Spotlight acts as the interaction) */}
 
       <svg
-        className="w-full h-full smooth-camera"
+        className={`w-full h-full ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
         viewBox={viewBox}
         preserveAspectRatio="xMidYMid meet"
         style={{ pointerEvents: 'all' }}
+        onMouseDown={(e) => {
+          setIsDragging(true);
+          setDragStart({ x: e.clientX, y: e.clientY });
+        }}
+        onMouseMove={(e) => {
+          if (!isDragging) return;
+
+          e.preventDefault();
+          const dx = e.clientX - dragStart.x;
+          const dy = e.clientY - dragStart.y;
+
+          // Convert pixel movement to SVG unit movement
+          // We need to know how many svg units 1 screen pixel represents.
+          const svgRect = e.currentTarget.getBoundingClientRect();
+          const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
+
+          const ratioX = vw / svgRect.width;
+          const ratioY = vh / svgRect.height;
+
+          const svgDx = dx * ratioX;
+          const svgDy = dy * ratioY;
+
+          // Update Viewbox
+          // Moving mouse RIGHT should move viewbox LEFT (to pan) -> subtract dx
+          setViewBox(`${vx - svgDx} ${vy - svgDy} ${vw} ${vh}`);
+          setDragStart({ x: e.clientX, y: e.clientY });
+        }}
+        onMouseUp={() => setIsDragging(false)}
+        onMouseLeave={() => setIsDragging(false)}
         onWheel={(e) => {
           e.stopPropagation();
           // Parse current ViewBox
@@ -260,56 +291,7 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNod
         })}
       </svg>
 
-      {/* Zoom Controls */}
-      <div className="absolute bottom-6 left-6 z-20 flex flex-col gap-2">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setViewBox(prev => {
-              const [x, y, w, h] = prev.split(' ').map(Number);
-              const zoomFactor = 0.8; // Zoom In
-              const newW = w * zoomFactor;
-              const newH = h * zoomFactor;
-              // Center zoom
-              const newX = x + (w - newW) / 2;
-              const newY = y + (h - newH) / 2;
-              return `${newX} ${newY} ${newW} ${newH}`;
-            });
-          }}
-          className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/10 text-white hover:bg-white/20 transition-all font-bold"
-          title="Zoom In"
-        >
-          <span className="text-xl leading-none">+</span>
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setViewBox("0 0 1600 900");
-          }}
-          className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/10 text-white hover:bg-white/20 transition-all font-bold"
-          title="Reset View"
-        >
-          <Radio size={20} />
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setViewBox(prev => {
-              const [x, y, w, h] = prev.split(' ').map(Number);
-              const zoomFactor = 1.25; // Zoom Out (inverse of 0.8)
-              const newW = w * zoomFactor;
-              const newH = h * zoomFactor;
-              const newX = x + (w - newW) / 2;
-              const newY = y + (h - newH) / 2;
-              return `${newX} ${newY} ${newW} ${newH}`;
-            });
-          }}
-          className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/10 text-white hover:bg-white/20 transition-all font-bold"
-          title="Zoom Out"
-        >
-          <span className="text-xl leading-none">−</span>
-        </button>
-      </div>
+
 
       {/* Reset Button (Selection) */}
       {selectedId && (
