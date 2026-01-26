@@ -171,6 +171,8 @@ def run_pipeline(input_csv, out_dir="backend/output"):
     all_ids = final_accounts["account_id"].tolist()
     risk_ids = set(final_accounts[final_accounts["class"] != "NORMAL"]["account_id"])
     fraud_ids = list(final_accounts[final_accounts["class"] == "FRAUD"]["account_id"])
+    at_risk_ids = list(final_accounts[final_accounts["class"] == "AT_RISK"]["account_id"])
+    normal_ids = list(final_accounts[final_accounts["class"] == "NORMAL"]["account_id"])
 
     edges = []
     step = 1
@@ -253,6 +255,35 @@ def run_pipeline(input_csv, out_dir="backend/output"):
                     "step": step,
                     "fraudEdge": 1
                 })
+                step += 1
+
+    # -------- CROSS-TYPE CONNECTIONS (MIXING) --------
+    # Fraud -> Normal (Mules)
+    if len(fraud_ids) > 0 and len(normal_ids) > 0:
+        for src in fraud_ids:
+            # Connect to 1-2 random normal accounts relative to population
+            targets = random.sample(normal_ids, min(random.randint(1, 2), len(normal_ids)))
+            for dst in targets:
+                amount = random.uniform(500, 5000) # Smaller amounts to normal people
+                edges.append({ "src": src, "dst": dst, "amount": round(amount, 2), "step": step, "fraudEdge": 1 })
+                step += 1
+
+    # Fraud -> Suspects (Layering)
+    if len(fraud_ids) > 0 and len(at_risk_ids) > 0:
+        for src in fraud_ids:
+            targets = random.sample(at_risk_ids, min(random.randint(1, 3), len(at_risk_ids)))
+            for dst in targets:
+                amount = random.uniform(10000, 50000)
+                edges.append({ "src": src, "dst": dst, "amount": round(amount, 2), "step": step, "fraudEdge": 1 })
+                step += 1
+
+    # Suspects -> Normal (Integration)
+    if len(at_risk_ids) > 0 and len(normal_ids) > 0:
+        for src in at_risk_ids:
+            targets = random.sample(normal_ids, min(random.randint(1, 2), len(normal_ids)))
+            for dst in targets:
+                amount = random.uniform(500, 10000)
+                edges.append({ "src": src, "dst": dst, "amount": round(amount, 2), "step": step, "fraudEdge": 0 }) # Not strictly fraud edge yet
                 step += 1
 
     links_path = os.path.join(out_dir, "fraud_links.csv")

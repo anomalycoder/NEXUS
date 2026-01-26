@@ -97,6 +97,51 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNod
         viewBox={viewBox}
         preserveAspectRatio="xMidYMid meet"
         style={{ pointerEvents: 'all' }}
+        onWheel={(e) => {
+          e.stopPropagation();
+          // Parse current ViewBox
+          const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
+
+          // Zoom Factor
+          // deltaY > 0 -> Zoom Out (Increase dimensions)
+          // deltaY < 0 -> Zoom In (Decrease dimensions)
+          const zoomFactor = e.deltaY > 0 ? 1.05 : 0.95;
+
+          // Calculate new dimensions
+          let newW = vw * zoomFactor;
+          let newH = vh * zoomFactor;
+
+          // Clamp zoom levels (prevent infinite zoom in/out)
+          if (newW < 200) { newW = 200; newH = 200 * (9 / 16); } // Max Zoom In
+          if (newW > 3200) { newW = 3200; newH = 3200 * (9 / 16); } // Max Zoom Out
+
+          // Get Mouse Position relative to SVG container
+          const svgRect = e.currentTarget.getBoundingClientRect();
+          const mouseX = e.clientX - svgRect.left;
+          const mouseY = e.clientY - svgRect.top;
+
+          // Convert Mouse Pos to SVG Coordinates (ratio)
+          const ratioX = mouseX / svgRect.width;
+          const ratioY = mouseY / svgRect.height;
+
+          // Calculate new X/Y to keep mouse point stable
+          // NewX = OldX + (widthDiff * ratioX)
+          // If we zoom in (widthDiff is negative), we move X to the right (add negative)
+          // If we zoom out (widthDiff is positive), we move X to the left (subtract positive)
+
+          // Correct Formula: 
+          // We want the point under mouse (P_m) to stay at same screen pos.
+          // P_m_screen = (P_m_world - ViewBox_x) / ViewBox_w
+          // Keeping P_m_screen constant.
+
+          const dx = (vw - newW) * ratioX;
+          const dy = (vh - newH) * ratioY;
+
+          const newX = vx + dx;
+          const newY = vy + dy;
+
+          setViewBox(`${newX} ${newY} ${newW} ${newH}`);
+        }}
       >
         <defs>
           <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -143,13 +188,12 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNod
           const isCritical = node.riskScore > 80;
           const color = getNodeColor(node);
 
-          // Opacity Logic: 
-          // If something is selected:
-          //   - Selected Node: 1
-          //   - Neighbor Node: 1
-          //   - Others: 0.5 (Visible but distinct, avoiding "blur/hidden" effect)
-          // If nothing selected: 1
+          // Opacity Logic
           const opacity = selectedId ? (isSelected || isNeighbor ? 1 : 0.5) : 1;
+
+          // LOD Logic: Show labels if zoomed in significantly (viewBox width < 800)
+          const currentZoomWidth = parseFloat(viewBox.split(' ')[2]);
+          const showLabel = currentZoomWidth < 800;
 
           return (
             <g
@@ -176,6 +220,21 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNod
                 style={{ pointerEvents: 'none' }}
               />
 
+              {/* LOD Label (Only visible when zoomed in) */}
+              {showLabel && (
+                <text
+                  x={node.x}
+                  y={node.y + 15}
+                  textAnchor="middle"
+                  fill={color}
+                  fontSize="6"
+                  fontWeight="bold"
+                  className="pointer-events-none select-none drop-shadow-md"
+                >
+                  {node.name.length > 10 ? node.name.slice(0, 8) + '...' : node.name}
+                </text>
+              )}
+
               {/* Glow Effect Circle - Show for Critical OR Neighbors when selected OR Selected Node */}
               <circle
                 cx={node.x}
@@ -201,7 +260,58 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNod
         })}
       </svg>
 
-      {/* Reset Button */}
+      {/* Zoom Controls */}
+      <div className="absolute bottom-6 left-6 z-20 flex flex-col gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setViewBox(prev => {
+              const [x, y, w, h] = prev.split(' ').map(Number);
+              const zoomFactor = 0.8; // Zoom In
+              const newW = w * zoomFactor;
+              const newH = h * zoomFactor;
+              // Center zoom
+              const newX = x + (w - newW) / 2;
+              const newY = y + (h - newH) / 2;
+              return `${newX} ${newY} ${newW} ${newH}`;
+            });
+          }}
+          className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/10 text-white hover:bg-white/20 transition-all font-bold"
+          title="Zoom In"
+        >
+          <span className="text-xl leading-none">+</span>
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setViewBox("0 0 1600 900");
+          }}
+          className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/10 text-white hover:bg-white/20 transition-all font-bold"
+          title="Reset View"
+        >
+          <Radio size={20} />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setViewBox(prev => {
+              const [x, y, w, h] = prev.split(' ').map(Number);
+              const zoomFactor = 1.25; // Zoom Out (inverse of 0.8)
+              const newW = w * zoomFactor;
+              const newH = h * zoomFactor;
+              const newX = x + (w - newW) / 2;
+              const newY = y + (h - newH) / 2;
+              return `${newX} ${newY} ${newW} ${newH}`;
+            });
+          }}
+          className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/10 text-white hover:bg-white/20 transition-all font-bold"
+          title="Zoom Out"
+        >
+          <span className="text-xl leading-none">−</span>
+        </button>
+      </div>
+
+      {/* Reset Button (Selection) */}
       {selectedId && (
         <button
           onClick={(e) => { e.stopPropagation(); onNodeClick(''); }}
