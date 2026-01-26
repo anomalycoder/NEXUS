@@ -26,10 +26,8 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNod
         const y = Math.max(0, Math.min(900 - zoomH, node.y - zoomH / 2));
         setViewBox(`${x} ${y} ${zoomW} ${zoomH}`);
       }
-    } else {
-      setViewBox("0 0 1600 900");
     }
-  }, [selectedId, accounts]);
+  }, [selectedId]);
 
   // Distinct Neon Palette
   const getNodeColor = (account: Account) => {
