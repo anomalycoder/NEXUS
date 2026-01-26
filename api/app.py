@@ -118,6 +118,17 @@ def insert_into_neo4j(accounts_csv, links_csv):
 # ======================================================
 # CSV UPLOAD + PIPELINE
 # ======================================================
+
+# ======================================================
+# DEBUG HELPER
+# ======================================================
+def log_error_to_file(e):
+    with open("backend_errors.log", "a") as f:
+        f.write(f"\n\n[{pd.Timestamp.now()}] ERROR:\n")
+        f.write(str(e))
+        f.write("\nTraceback:\n")
+        traceback.print_exc(file=f)
+
 # ======================================================
 # SPLIT PIPELINE ENDPOINTS
 # ======================================================
@@ -149,6 +160,7 @@ def upload_file():
         
     except Exception as e:
         traceback.print_exc()
+        log_error_to_file(e)
         return jsonify({"error": str(e)}), 500
 
 
@@ -172,6 +184,7 @@ def process_ml():
 
     except Exception as e:
         traceback.print_exc()
+        log_error_to_file(e)
         return jsonify({"error": str(e)}), 500
 
 
@@ -195,6 +208,7 @@ def ingest_neo4j():
 
     except Exception as e:
         traceback.print_exc()
+        log_error_to_file(e)
         return jsonify({"error": str(e)}), 500
 
 # Keep legacy endpoint for backward compatibility (optional, but good practice)

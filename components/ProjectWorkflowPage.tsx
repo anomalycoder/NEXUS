@@ -84,7 +84,10 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
         formData.append("file", file);
 
         const res = await fetch(`${API_BASE_URL}/upload`, { method: "POST", body: formData });
-        if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || err.message || `Upload failed: ${res.statusText}`);
+        }
         return res.json();
     };
 
@@ -94,7 +97,10 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ filePath })
         });
-        if (!res.ok) throw new Error(`ML Analysis failed: ${res.statusText}`);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || err.message || `ML Analysis failed: ${res.statusText}`);
+        }
         return res.json();
     };
 
@@ -104,7 +110,10 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ accounts, links })
         });
-        if (!res.ok) throw new Error(`Neo4j Ingestion failed: ${res.statusText}`);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || err.message || `Neo4j Ingestion failed: ${res.statusText}`);
+        }
         return res.json();
     };
 
