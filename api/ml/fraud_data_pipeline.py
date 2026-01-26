@@ -127,6 +127,20 @@ def run_pipeline(input_csv, out_dir="backend/output"):
         # Use numpy correctly with .values for assignment if needed, but loc works directly
         accounts.loc[top_idx, "riskScore"] = np.random.uniform(85, 99, size=fraud_target_count)
 
+    # 4.6 FORCE AT_RISK RATIO (User Req: 23:1 -> ~4.3%)
+    risk_target_count = int(len(accounts) * 0.045)
+    
+    if risk_target_count > 0:
+        # Get next highest candidates that weren't already boosted to fraud
+        # We look for top (fraud + risk) and take the tail
+        total_target = fraud_target_count + risk_target_count
+        risk_idx = accounts.nlargest(total_target, "riskScore").index[fraud_target_count:]
+        
+        # Boost to At-Risk range (55-75 seems safe given fraud starts at 65/80, 
+        # let's respect the classify threshold which defines 'AT_RISK' around 40+.
+        # To make them distinctly yellow, let's put them in 50-64 range.
+        accounts.loc[risk_idx, "riskScore"] = np.random.uniform(50, 64, size=len(risk_idx))
+
     # Cleanup temp columns
     accounts.drop(columns=[f"{c}_z" for c in features] + ["raw_score"], inplace=True)
 

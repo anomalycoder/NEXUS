@@ -184,7 +184,7 @@ def graph():
           t.amount AS amount,
           t.step AS step,
           t.fraudEdge AS fraudEdge
-        LIMIT 1000
+        LIMIT 500
         """
 
         result = session.run(query)
