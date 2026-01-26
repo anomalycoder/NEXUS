@@ -99,10 +99,10 @@ def run_pipeline(input_csv, out_dir="backend/output"):
     # Composite risk score (weighted avg of z-scores)
     # Weighted towards high amounts and suspicious balance changes
     accounts["raw_score"] = (
-        accounts["total_amount_z"] * 0.4 + 
+        accounts["total_amount_z"] * 0.5 + 
         accounts["avg_balance_diff_z"] * 0.3 + 
-        accounts["tx_count_z"] * 0.2 + 
-        accounts["zero_balance_count_z"] * 0.1
+        accounts["tx_count_z"] * 0.4 + 
+        accounts["zero_balance_count_z"] * 0.2
     )
 
     # Normalize to 0-100 range using Min-Max scaling
@@ -119,9 +119,9 @@ def run_pipeline(input_csv, out_dir="backend/output"):
 
 
     def classify(score):
-        if score >= 80:
+        if score >= 65: # Lowered from 80 to catch more
             return "FRAUD"
-        elif score >= 55:
+        elif score >= 40: # Lowered from 55
             return "AT_RISK"
         return "NORMAL"
 
@@ -164,9 +164,15 @@ def run_pipeline(input_csv, out_dir="backend/output"):
 
     # -------- DENSE SYNTHETIC GRAPH --------
     for src in all_ids:
-        degree = random.randint(MIN_LINKS_PER_NODE, MAX_LINKS_PER_NODE)
+        # Fraud nodes form bigger rings (higher degree)
+        is_fraud_node = src in risk_ids
+        
+        if is_fraud_node:
+            degree = random.randint(MIN_LINKS_PER_NODE + 3, MAX_LINKS_PER_NODE + 5)
+        else:
+            degree = random.randint(MIN_LINKS_PER_NODE, MAX_LINKS_PER_NODE)
 
-        targets = random.sample(all_ids, degree)
+        targets = random.sample(all_ids, min(degree, len(all_ids)))
         for dst in targets:
             if src == dst:
                 continue
