@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     Upload,
     Database,
@@ -54,6 +54,34 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
     const [showResults, setShowResults] = useState(false);
     const [logs, setLogs] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+
+    // API_BASE_URL defined early for health check
+    const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+
+    useEffect(() => {
+        const checkBackend = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/`);
+                if (res.ok) setBackendStatus('online');
+                else setBackendStatus('offline');
+            } catch (e) {
+                console.error("Backend health check failed:", e);
+                setBackendStatus('offline');
+            }
+        };
+        checkBackend();
+    }, []);
+
+    const handleUploadClick = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        } else {
+            console.error("File input ref is null");
+        }
+    };
+
+    // Auto-scroll helper removed to allow manual scrolling
 
     const [steps, setSteps] = useState<ProcessingStep[]>([
         { id: 0, title: "Data Upload", description: "", icon: <Upload />, status: 'idle', progress: 0, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/50" },
@@ -68,7 +96,7 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
     const addLog = (msg: string, type: 'info' | 'success' | 'error' = 'info') => {
         const ts = new Date().toLocaleTimeString('en-GB', { hour12: false });
         const prefix = type === 'error' ? '[ERROR]' : type === 'success' ? '[SUCCESS]' : '[INFO]';
-        setLogs(prev => [`[${ts}] ${prefix} ${msg}`, ...prev].slice(0, 20));
+        setLogs(prev => [...prev, `[${ts}] ${prefix} ${msg}`]);
     };
 
     const updateStep = (id: number, status: ProcessingStep['status'], progress = 100) => {
@@ -77,7 +105,7 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
 
     /* ================= BACKEND CALLS ================= */
 
-    const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+    // API_BASE_URL defined above
 
     const uploadFile = async (file: File) => {
         const formData = new FormData();
@@ -191,7 +219,7 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
     /* ================= UI ================= */
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-black dark:to-neutral-900 p-6">
+        <div className="min-h-screen max-h-screen overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-200 dark:from-black dark:to-neutral-900 p-6">
 
             {/* HEADER */}
             <div className="text-center mb-10">
@@ -200,6 +228,11 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
                 </div>
                 <h1 className="text-4xl font-black uppercase">Fraud Detection Pipeline</h1>
                 <p className="text-sm text-slate-500 mt-2">Upload CSV → ML → Graph → Visualization</p>
+                {backendStatus === 'offline' && (
+                    <div className="mt-4 bg-red-500/10 text-red-500 px-4 py-2 rounded-lg inline-block border border-red-500/20">
+                        ⚠️ Backend Offline. Please restart the Python server.
+                    </div>
+                )}
             </div>
 
             {/* UPLOAD */}
@@ -219,7 +252,7 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
                     }}
                 />
                 {!uploadedFile ? (
-                    <button onClick={() => fileInputRef.current?.click()} className="px-6 py-3 bg-indigo-600 text-white rounded-lg">
+                    <button onClick={handleUploadClick} className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                         Upload CSV
                     </button>
                 ) : (
@@ -285,9 +318,9 @@ const ProjectWorkflowPage: React.FC<ProjectWorkflowPageProps> = ({ onNavigate })
             </div>
 
             {/* LOGS */}
-            <div className="max-w-6xl mx-auto bg-black text-green-400 font-mono text-xs p-4 rounded-xl h-60 overflow-auto mb-10">
-                {logs.map((l, i) => <div key={i}>{l}</div>)}
+            <div className="max-w-6xl mx-auto bg-black text-green-400 font-mono text-xs p-4 rounded-xl h-96 overflow-y-scroll mb-10 border border-slate-700 shadow-inner">
                 {logs.length === 0 && <div className="opacity-50">Waiting for upload…</div>}
+                {logs.map((l, i) => <div key={i} className="mb-1 border-b border-green-900/30 pb-1 last:border-0">{l}</div>)}
             </div>
 
             {/* RESULTS */}

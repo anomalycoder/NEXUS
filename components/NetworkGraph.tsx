@@ -189,7 +189,8 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNod
             if (!target) return null;
 
             const isCritical = source.riskScore > 80 && target.riskScore > 80;
-            const isRelated = selectedId && (source.id === selectedId || target.id === selectedId);
+            const isRelated = (selectedId && (source.id === selectedId || target.id === selectedId)) ||
+              (hoveredId && (source.id === hoveredId || target.id === hoveredId));
 
             return (
               <line
@@ -225,14 +226,12 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ accounts, selectedId, onNod
           const isHoverNeighbor = hoveredId ? accounts.find(a => a.id === hoveredId)?.connections.includes(node.id) : false;
 
           // Opacity Logic: 
-          // If Selection Active: Focus on Selection.
-          // If No Selection but Hover: Focus on Hover.
-          // Else: 1
+          // Show if part of selection OR part of hover interaction
           let opacity = 1;
-          if (selectedId) {
-            opacity = (isSelected || isNeighbor) ? 1 : 0.2;
-          } else if (hoveredId) {
-            opacity = (isHovered || isHoverNeighbor) ? 1 : 0.2;
+          if (selectedId || hoveredId) {
+            const visibleInSelection = selectedId ? (isSelected || isNeighbor) : false;
+            const visibleInHover = hoveredId ? (isHovered || isHoverNeighbor) : false;
+            opacity = (visibleInSelection || visibleInHover) ? 1 : 0.2;
           }
 
           // Highlighting

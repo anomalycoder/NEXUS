@@ -8,8 +8,9 @@ from flask_cors import CORS
 from neo4j import GraphDatabase
 from dotenv import load_dotenv
 
-# Load environment variables from .env file if present
-load_dotenv()
+# Load environment variables from .env file explicitly
+dotenv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(dotenv_path)
 
 # ======================================================
 # FIX IMPORT PATH
