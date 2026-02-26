@@ -263,50 +263,84 @@ def upload_csv_legacy():
 # ======================================================
 @app.route("/api/graph")
 def graph():
-    with driver.session(database=NEO4J_DB) as session:
-        query = """
-        MATCH (a:Account)-[t:TRANSFERRED_TO]->(b:Account)
-        RETURN
-          a.id AS source,
-          b.id AS target,
-          a.riskScore AS sourceRisk,
-          b.riskScore AS targetRisk,
-          a.mlClass AS sourceMLClass,
-          b.mlClass AS targetMLClass,
-          t.amount AS amount,
-          t.step AS step,
-          t.fraudEdge AS fraudEdge
-        LIMIT 500
-        """
+    try:
+        with driver.session(database=NEO4J_DB) as session:
+            query = """
+            MATCH (a:Account)-[t:TRANSFERRED_TO]->(b:Account)
+            RETURN
+              a.id AS source,
+              b.id AS target,
+              a.riskScore AS sourceRisk,
+              b.riskScore AS targetRisk,
+              a.mlClass AS sourceMLClass,
+              b.mlClass AS targetMLClass,
+              t.amount AS amount,
+              t.step AS step,
+              t.fraudEdge AS fraudEdge
+            LIMIT 500
+            """
 
-        result = session.run(query)
+            result = session.run(query)
 
+            nodes = {}
+            links = []
+
+            for r in result:
+                if r["source"] not in nodes:
+                    nodes[r["source"]] = {
+                        "id": r["source"],
+                        "riskScore": r["sourceRisk"],
+                        "mlClass": r["sourceMLClass"]
+                    }
+
+                if r["target"] not in nodes:
+                    nodes[r["target"]] = {
+                        "id": r["target"],
+                        "riskScore": r["targetRisk"],
+                        "mlClass": r["targetMLClass"]
+                    }
+
+                links.append({
+                    "source": r["source"],
+                    "target": r["target"],
+                    "amount": r["amount"],
+                    "step": r["step"],
+                    "fraud": r["fraudEdge"]
+                })
+
+            return jsonify({
+                "nodes": list(nodes.values()),
+                "links": links
+            })
+    except Exception as e:
+        print("Falling back to local CSV due to Neo4j error:", str(e))
+        accounts_path = os.path.join(OUTPUT_DIR, "final_accounts.csv")
+        links_path = os.path.join(OUTPUT_DIR, "fraud_links.csv")
+        
+        if not os.path.exists(accounts_path) or not os.path.exists(links_path):
+            return jsonify({"error": "Neo4j unavailable and local CSVs not found."}), 500
+            
+        accounts_df = pd.read_csv(accounts_path).fillna(0)
+        links_df = pd.read_csv(links_path).head(500).fillna(0)
+        
         nodes = {}
+        for _, r in accounts_df.iterrows():
+            nodes[r["account_id"]] = {
+                "id": str(r["account_id"]),
+                "riskScore": r.get("riskScore", 0),
+                "mlClass": r.get("class", "NORMAL")
+            }
+            
         links = []
-
-        for r in result:
-            if r["source"] not in nodes:
-                nodes[r["source"]] = {
-                    "id": r["source"],
-                    "riskScore": r["sourceRisk"],
-                    "mlClass": r["sourceMLClass"]
-                }
-
-            if r["target"] not in nodes:
-                nodes[r["target"]] = {
-                    "id": r["target"],
-                    "riskScore": r["targetRisk"],
-                    "mlClass": r["targetMLClass"]
-                }
-
+        for _, r in links_df.iterrows():
             links.append({
-                "source": r["source"],
-                "target": r["target"],
+                "source": str(r["src"]),
+                "target": str(r["dst"]),
                 "amount": r["amount"],
                 "step": r["step"],
-                "fraud": r["fraudEdge"]
+                "fraud": r.get("fraudEdge", 0)
             })
-
+            
         return jsonify({
             "nodes": list(nodes.values()),
             "links": links

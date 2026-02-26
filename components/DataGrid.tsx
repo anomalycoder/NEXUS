@@ -6,9 +6,12 @@ interface DataGridProps {
   accounts: Account[];
   selectedId: string | null;
   onRowClick: (id: string) => void;
+  currency: string;
 }
 
-const DataGrid: React.FC<DataGridProps> = ({ accounts, selectedId, onRowClick }) => {
+import { formatCurrency } from '../utils';
+
+const DataGrid: React.FC<DataGridProps> = ({ accounts, selectedId, onRowClick, currency }) => {
   return (
     <div className="w-full h-full bg-slate-100/50 dark:bg-[#050505] rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden flex flex-col transition-colors duration-500 backdrop-blur-sm">
       <div className="p-6 border-b border-slate-200 dark:border-white/5 flex justify-between items-center bg-white/40 dark:bg-white/[0.02]">
@@ -60,7 +63,7 @@ const DataGrid: React.FC<DataGridProps> = ({ accounts, selectedId, onRowClick })
                     <span className={`font-mono font-bold ${account.riskScore > 70 ? 'text-rose-500 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'}`}>{account.riskScore}</span>
                   </div>
                 </td>
-                <td className="p-5 font-mono text-slate-700 dark:text-slate-200 font-bold hidden md:table-cell">{account.volume}</td>
+                <td className="p-5 font-mono text-slate-700 dark:text-slate-200 font-bold hidden md:table-cell">{formatCurrency(account.volumeValue, currency)}</td>
               </tr>
             ))}
           </tbody>

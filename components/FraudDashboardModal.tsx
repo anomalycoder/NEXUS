@@ -3,12 +3,14 @@ import { X, Calendar, Download, BarChart3, PieChart, TrendingUp, ShieldAlert, Sh
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart as RePieChart, Pie, Cell, Legend } from 'recharts';
 
 import { Account } from '../types';
+import { formatCurrency } from '../utils';
 
 interface FraudDashboardModalProps {
     accounts: Account[];
+    currency: string;
 }
 
-const FraudDashboardModal: React.FC<FraudDashboardModalProps> = ({ accounts }) => {
+const FraudDashboardModal: React.FC<FraudDashboardModalProps> = ({ accounts, currency }) => {
     const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
     const [riskThreshold, setRiskThreshold] = useState(80);
 
@@ -129,7 +131,7 @@ const FraudDashboardModal: React.FC<FraudDashboardModalProps> = ({ accounts }) =
                         <div>
                             <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Total Volume</p>
                             <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-                                ₹{accounts.reduce((acc, curr) => acc + curr.volumeValue, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {formatCurrency(accounts.reduce((acc, curr) => acc + curr.volumeValue, 0), currency)}
                             </p>
                         </div>
                     </div>
@@ -326,7 +328,7 @@ const FraudDashboardModal: React.FC<FraudDashboardModalProps> = ({ accounts }) =
                                         </td>
                                         <td className="p-3 opacity-70 hidden md:table-cell">{acc.userId}</td>
                                         <td className="p-3 text-indigo-500 hidden md:table-cell">{acc.ipAddress}</td>
-                                        <td className="p-3 text-right font-bold">{acc.volume}</td>
+                                        <td className="p-3 text-right font-bold">{formatCurrency(acc.volumeValue, currency)}</td>
                                     </tr>
                                 ))}
                                 {filteredAccounts.length === 0 && (

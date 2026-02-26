@@ -2,13 +2,15 @@ import React from 'react';
 import { Account } from '../types';
 import { Network, Share2, TrendingUp, ArrowUpRight, Activity, ShieldAlert, ShieldCheck, AlertCircle } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { formatCurrency } from '../utils';
 
 interface AnalyticsPanelProps {
     accounts: Account[];
     selectedId: string | null;
+    currency: string;
 }
 
-const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ accounts, selectedId }) => {
+const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ accounts, selectedId, currency }) => {
     const selectedNode = accounts.find(a => a.id === selectedId);
     const neighbors = selectedNode ? accounts.filter(a => selectedNode.connections.includes(a.id)) : [];
 
@@ -62,7 +64,7 @@ const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ accounts, selectedId })
                         <div>
                             <div className="text-[9px] text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">Cumulative Volume</div>
                             <div className="text-2xl font-mono text-slate-900 dark:text-white flex items-baseline gap-2">
-                                ₹{totalVolume.toFixed(2)}
+                                {formatCurrency(totalVolume, currency)}
                             </div>
                         </div>
                         {spikeCount > 0 && (
@@ -87,7 +89,7 @@ const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ accounts, selectedId })
                                     cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeDasharray: '4 4' }}
                                     contentStyle={{ backgroundColor: '#000', borderColor: '#333', borderRadius: '4px', fontSize: '11px', textTransform: 'uppercase' }}
                                     itemStyle={{ color: '#fff' }}
-                                    formatter={(value: number) => [`₹${value.toFixed(2)}`, '']}
+                                    formatter={(value: number) => [formatCurrency(value, currency), '']}
                                 />
                                 <ReferenceLine y={10} stroke="#f43f5e" strokeDasharray="3 3" opacity={0.5} />
                                 <Area
@@ -117,7 +119,7 @@ const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ accounts, selectedId })
                                     <span className="text-[9px] text-slate-400 dark:text-white/20 uppercase">Wire Transfer</span>
                                 </div>
                                 <span className={`font-mono text-xs ${h.isSpike ? "text-rose-500 dark:text-rose-400 font-bold" : "text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200"}`}>
-                                    ₹{h.amount.toFixed(2)}
+                                    {formatCurrency(h.amount, currency)}
                                 </span>
                             </div>
                         ))}

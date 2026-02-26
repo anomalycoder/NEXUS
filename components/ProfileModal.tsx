@@ -1,22 +1,25 @@
-import React, { useState } from 'react';
-import { X, ShieldCheck, Award, Target, Briefcase, Edit2, Save, User, Fingerprint } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ShieldCheck, Award, Target, Briefcase, Edit2, Save, User, Fingerprint, Camera } from 'lucide-react';
+import { UserProfile } from '../types';
 
 interface ProfileModalProps {
     isOpen: boolean;
     onClose: () => void;
+    isGhostMode?: boolean;
+    profile: UserProfile;
+    onUpdateProfile: (profile: UserProfile) => void;
 }
 
-const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
+const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, isGhostMode, profile, onUpdateProfile }) => {
     const [isEditing, setIsEditing] = useState(false);
-    const [profile, setProfile] = useState({
-        name: 'Vigilante',
-        role: 'Lead Security Analyst',
-        id: 'NEX-8829-ALPHA',
-        clearance: 'Level 5 Administrator',
-        image: null as string | null
-    });
-
     const [tempProfile, setTempProfile] = useState(profile);
+
+    useEffect(() => {
+        if (isOpen) {
+            setTempProfile(profile);
+            setIsEditing(false);
+        }
+    }, [isOpen, profile]);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -32,7 +35,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     const handleSave = () => {
-        setProfile(tempProfile);
+        onUpdateProfile(tempProfile);
         setIsEditing(false);
     };
 
@@ -56,22 +59,21 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                 <div className="px-8 pb-8 relative flex-1">
                     {/* Avatar */}
                     <div className="relative w-24 h-24 -mt-12 mx-auto md:mx-0 mb-6">
-                        <div className="w-24 h-24 bg-white dark:bg-[#0a0a0a] rounded-3xl border-4 border-white dark:border-[#0a0a0a] flex items-center justify-center shadow-xl overflow-hidden relative group">
-                            {tempProfile.image || profile.image ? (
-                                <img src={tempProfile.image || profile.image || ''} alt="Profile" className="w-full h-full object-cover" />
+                        <div className="w-24 h-24 bg-white dark:bg-[#0a0a0a] rounded-2xl border-4 border-white dark:border-[#0a0a0a] flex items-center justify-center shadow-xl overflow-hidden relative group transition-transform hover:scale-105">
+                            {tempProfile.image ? (
+                                <img src={tempProfile.image} alt="Profile" className={`w-full h-full object-cover transition-all ${isGhostMode ? 'blur-md grayscale' : ''} ${isEditing ? 'opacity-50' : ''}`} />
                             ) : (
-                                <div className="w-full h-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-2xl font-black text-indigo-500">
-                                    {profile.name.split(' ').map(n => n[0]).join('')}
+                                <div className="w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-3xl font-black text-indigo-500">
+                                    {isGhostMode ? <User size={36} /> : (tempProfile.name || 'V').charAt(0).toUpperCase()}
                                 </div>
                             )}
 
                             {/* Image Overlay in Edit Mode */}
                             {isEditing && (
-                                <label className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                                <label className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center cursor-pointer hover:bg-black/70 transition-colors">
                                     <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                                    <div className="text-white text-xs font-bold uppercase tracking-widest text-center">
-                                        Change <br /> Photo
-                                    </div>
+                                    <Camera size={20} className="text-white mb-1" />
+                                    <span className="text-[9px] font-bold text-white uppercase tracking-widest">Upload</span>
                                 </label>
                             )}
                         </div>
@@ -92,28 +94,36 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                         {/* Profile Form */}
                         <div className="space-y-4">
                             <div>
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Identity</label>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Identity Details</label>
                                 {isEditing ? (
-                                    <div className="space-y-2">
-                                        <input
-                                            value={tempProfile.name}
-                                            onChange={(e) => setTempProfile({ ...tempProfile, name: e.target.value })}
-                                            className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
-                                            placeholder="Full Name"
-                                        />
-                                        <input
-                                            value={tempProfile.role}
-                                            onChange={(e) => setTempProfile({ ...tempProfile, role: e.target.value })}
-                                            className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none"
-                                            placeholder="Role Title"
-                                        />
+                                    <div className="space-y-3 p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl">
+                                        <div>
+                                            <label className="text-[10px] uppercase text-indigo-500 font-bold mb-1 block">Alias / Name</label>
+                                            <input
+                                                value={tempProfile.name}
+                                                onChange={(e) => setTempProfile({ ...tempProfile, name: e.target.value })}
+                                                className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm transition-all shadow-sm"
+                                                placeholder="Enter operative alias"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] uppercase text-indigo-500 font-bold mb-1 block">Designation</label>
+                                            <input
+                                                value={tempProfile.role}
+                                                onChange={(e) => setTempProfile({ ...tempProfile, role: e.target.value })}
+                                                className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm transition-all shadow-sm"
+                                                placeholder="Enter role designation"
+                                            />
+                                        </div>
                                     </div>
                                 ) : (
                                     <div>
-                                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{profile.name}</h2>
+                                        <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                                            {isGhostMode ? "Agent ████" : profile.name}
+                                        </h2>
                                         <div className="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
                                             <Briefcase size={14} className="text-indigo-500" />
-                                            <span>{profile.role}</span>
+                                            <span>{isGhostMode ? "Anonymous Operative" : profile.role}</span>
                                         </div>
                                     </div>
                                 )}
@@ -126,7 +136,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                 </div>
                                 <div>
                                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nexus ID</div>
-                                    <div className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">{profile.id}</div>
+                                    <div className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">
+                                        {isGhostMode ? "[REDACTED]" : profile.id}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -158,8 +170,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                     <ShieldCheck size={24} />
                                 </div>
                                 <div>
-                                    <div className="text-sm font-bold text-slate-900 dark:text-white">{profile.clearance}</div>
-                                    <div className="text-xs text-slate-500 dark:text-white/50">Full Write Access to Neural Ledger</div>
+                                    <div className="text-sm font-bold text-slate-900 dark:text-white">
+                                        {isGhostMode ? "Masked" : profile.clearance}
+                                    </div>
+                                    <div className="text-xs text-slate-500 dark:text-white/50">
+                                        {isGhostMode ? "Read-Only Proxy" : "Full Write Access to Neural Ledger"}
+                                    </div>
                                 </div>
                             </div>
                         </div>

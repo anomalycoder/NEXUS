@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Account } from '../types';
 import { Search as SearchIcon, ShieldAlert, ShieldCheck, Snowflake, ArrowUpRight, ArrowDownLeft, Activity, CreditCard, Calendar } from 'lucide-react';
+import { formatCurrency } from '../utils';
 
 interface SearchPageProps {
     accounts: Account[];
@@ -27,20 +28,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ accounts, currency, initialQuer
         ).slice(0, 10);
     }, [accounts, query]);
 
-    const formatCurrency = (val: number) => {
-        // Reusing logic (should ideally be a helper function)
-        if (currency === 'INR') return `₹${val.toFixed(2)}`;
-        const rates: Record<string, { rate: number, symbol: string }> = {
-            'USD': { rate: 0.12, symbol: '$' },
-            'SAR': { rate: 0.45, symbol: '﷼' },
-            'AUD': { rate: 0.18, symbol: 'A$' },
-            'CAD': { rate: 0.16, symbol: 'C$' },
-            'SGD': { rate: 0.16, symbol: 'S$' },
-        };
-        const cur = rates[currency];
-        if (!cur) return `${val}`;
-        return `${cur.symbol}${(val * cur.rate).toFixed(2)}M`;
-    };
+
 
     const handleExportCSV = () => {
         if (!selectedAccount) return;
@@ -114,7 +102,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ accounts, currency, initialQuer
 
                                         <div className="flex flex-col items-end justify-center gap-1 flex-shrink-0 ml-2">
                                             <div className="text-xs md:text-sm font-mono font-bold text-slate-700 dark:text-slate-300">
-                                                {formatCurrency(acc.volumeValue)}
+                                                {formatCurrency(acc.volumeValue, currency)}
                                             </div>
                                             <div className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wide">
                                                 {acc.history.length} Txns
@@ -175,7 +163,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ accounts, currency, initialQuer
                                 {(() => {
                                     // Quick format re-use or parse existing volume string if needed.
                                     // Using the volumeValue from data for consistency
-                                    return formatCurrency(selectedAccount.volumeValue);
+                                    return formatCurrency(selectedAccount.volumeValue, currency);
                                 })()}
                             </div>
                         </div>
@@ -224,7 +212,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ accounts, currency, initialQuer
                                                 </span>
                                             </td>
                                             <td className="p-5 text-right font-mono font-bold text-slate-900 dark:text-white">
-                                                {formatCurrency(txn.amount)}
+                                                {formatCurrency(txn.amount, currency)}
                                             </td>
                                             <td className="p-5 text-center hidden md:table-cell">
                                                 {txn.isSpike ? (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Account, Page } from './types';
+import { Account, Page, UserProfile } from './types';
 import Sidebar from './components/Sidebar';
 import NetworkGraph from './components/NetworkGraph';
 import DataGrid from './components/DataGrid';
@@ -13,6 +13,7 @@ import FraudDashboardModal from './components/FraudDashboardModal';
 import SettingsModal from './components/SettingsModal';
 import LoginPage from './components/LoginPage';
 import { Bell, LayoutGrid, Network, Search, Menu, Settings as SettingsIcon, LogOut, User, ScanEye, Trash2, X } from 'lucide-react';
+import { formatCurrency } from './utils';
 
 
 const App: React.FC = () => {
@@ -26,6 +27,15 @@ const App: React.FC = () => {
     const [showIntro, setShowIntro] = useState(true);
     const [searchQuery, setSearchQuery] = useState<string | null>(null);
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+    // User Profile State
+    const [userProfile, setUserProfile] = useState<UserProfile>({
+        name: 'Vigilante',
+        role: 'Lead Security Analyst',
+        id: 'NEX-8829-ALPHA',
+        clearance: 'Level 5 Administrator',
+        image: null
+    });
 
     // Settings State
     const [settings, setSettings] = useState({
@@ -52,14 +62,14 @@ const App: React.FC = () => {
 
     const generateHistory = (isRisk: boolean) => {
         return Array.from({ length: 20 }).map((_, i) => {
-            let val = Math.random() * 4;
+            let val = Math.random() * 4000000;
             const isSpike = Math.random() > 0.85;
-            if (isSpike) val += (Math.random() * 8 + 6);
+            if (isSpike) val += (Math.random() * 8000000 + 6000000);
             if (!isRisk) val = val * 0.2;
             return {
                 date: `T-${20 - i}`,
                 amount: parseFloat(val.toFixed(2)),
-                isSpike: val > 10
+                isSpike: val > 10000000
             };
         });
     };
@@ -67,7 +77,7 @@ const App: React.FC = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+                const API_BASE_URL = (import.meta as any).env.VITE_API_URL || '/api';
                 const response = await fetch(`${API_BASE_URL}/graph`);
                 const data = await response.json();
 
@@ -88,8 +98,8 @@ const App: React.FC = () => {
                     initStats(l.target);
 
                     // Add to Volume (we'll sum in+out for "Total Volume")
-                    nodeStats[l.source].totalVol += l.amount;
-                    nodeStats[l.target].totalVol += l.amount;
+                    nodeStats[l.source].totalVol += l.amount * 1000;
+                    nodeStats[l.target].totalVol += l.amount * 1000;
 
                     // Add neighbors
                     nodeStats[l.source].neighbors.add(l.target);
@@ -98,7 +108,7 @@ const App: React.FC = () => {
                     // Add to History
                     const historyItem = {
                         date: `Step ${l.step}`,
-                        amount: parseFloat(l.amount.toFixed(2)),
+                        amount: parseFloat((l.amount * 1000).toFixed(2)),
                         isSpike: l.fraud // Use fraud flag or high amount for spike
                     };
 
@@ -144,20 +154,20 @@ const App: React.FC = () => {
                         const y = existingPos ? existingPos.y : Math.random() * 900;
 
                         return {
-                            id: n.id,
+                            id: String(n.id),
                             userId: `USR-${n.id}`,
-                            transactionId: `TXN-${n.id.substring(0, 8)}`, // Consistent TXN ref
+                            transactionId: `TXN-${String(n.id).substring(0, 8)}`, // Consistent TXN ref
                             ipAddress: `192.168.1.${ipSuffix}`,
                             name: `${n.id}`, // Use real ID
-                            entity: n.id.startsWith('M') ? 'Merchant' : 'Customer',
-                            type: n.id.startsWith('M') ? 'Corporate' : 'Individual',
-                            riskScore: n.riskScore ? parseFloat(n.riskScore.toFixed(2)) : (n.graphScore * 10),
-                            status: (n.riskScore > 80 || n.mlClass === 'AT_RISK' || n.mlClass === 'FRAUD') ? 'Flagged' : 'Safe',
+                            entity: String(n.id).startsWith('M') ? 'Merchant' : 'Customer',
+                            type: String(n.id).startsWith('M') ? 'Corporate' : 'Individual',
+                            riskScore: typeof n.riskScore === 'number' ? parseFloat(n.riskScore.toFixed(2)) : (n.graphScore ? parseFloat((n.graphScore * 10).toFixed(2)) : 0),
+                            status: ((typeof n.riskScore === 'number' && n.riskScore > 80) || n.mlClass === 'AT_RISK' || n.mlClass === 'FRAUD') ? 'Flagged' : 'Safe',
 
-                            volume: `₹${stats.totalVol.toFixed(2)}`,
+                            volume: formatCurrency(stats.totalVol, settings.currency),
                             volumeValue: stats.totalVol,
 
-                            flagCount: n.graphScore > 2 ? n.graphScore : 0, // graphScore might also be undefined, but keeping as is if used elsewhere
+                            flagCount: n.graphScore && n.graphScore > 2 ? n.graphScore : 0,
                             lastActive: sortedHistory.length > 0 ? sortedHistory[0].date : 'N/A',
 
                             x: x,
@@ -178,16 +188,22 @@ const App: React.FC = () => {
         fetchData();
         const intervalId = setInterval(fetchData, 3000);
         return () => clearInterval(intervalId);
-    }, []);
+    }, [settings.currency]);
 
-    // Theme Effect
+    // Theme and Accessibility Effects
     useEffect(() => {
         if (settings.darkMode) {
             document.documentElement.classList.add('dark');
         } else {
             document.documentElement.classList.remove('dark');
         }
-    }, [settings.darkMode]);
+
+        if (settings.reducedMotion) {
+            document.documentElement.classList.add('reduce-motion');
+        } else {
+            document.documentElement.classList.remove('reduce-motion');
+        }
+    }, [settings.darkMode, settings.reducedMotion]);
 
     const handleClosePanel = () => {
         setSelectedId(null);
@@ -337,11 +353,21 @@ const App: React.FC = () => {
                             {/* User Menu */}
                             <button className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-white/10 group" onClick={() => setIsProfileOpen(true)}>
                                 <div className="text-right hidden md:block">
-                                    <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-indigo-500 transition-colors">Vigilante</div>
-                                    <div className="text-[10px] text-slate-500 dark:text-white/40">Security Analyst</div>
+                                    <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-indigo-500 transition-colors">
+                                        {settings.ghostMode ? "Agent ████" : userProfile.name}
+                                    </div>
+                                    <div className="text-[10px] text-slate-500 dark:text-white/40">
+                                        {settings.ghostMode ? "[REDACTED]" : userProfile.role}
+                                    </div>
                                 </div>
-                                <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-                                    V
+                                <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform overflow-hidden relative">
+                                    {settings.ghostMode ? (
+                                        <User size={16} />
+                                    ) : userProfile.image ? (
+                                        <img src={userProfile.image} alt={userProfile.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        userProfile.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+                                    )}
                                 </div>
                             </button>
                         </div>
@@ -362,6 +388,7 @@ const App: React.FC = () => {
                                 ) : currentPage === 'dashboard' ? (
                                     <FraudDashboardModal
                                         accounts={accounts}
+                                        currency={settings.currency}
                                     />
 
                                 ) : currentPage === 'workflow' ? (
@@ -379,13 +406,14 @@ const App: React.FC = () => {
                                         accounts={accounts}
                                         selectedId={selectedId}
                                         onRowClick={setSelectedId}
+                                        currency={settings.currency}
                                     />
                                 )}
                             </div>
 
                             {/* Bottom Analytics - Expands on click */}
                             <div className={`flex-shrink-0 transition-all duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${selectedId ? 'h-72 opacity-100' : 'h-0 opacity-0 overflow-hidden'}`}>
-                                <AnalyticsPanel accounts={accounts} selectedId={selectedId} />
+                                <AnalyticsPanel accounts={accounts} selectedId={selectedId} currency={settings.currency} />
                             </div>
                         </div>
 
@@ -394,6 +422,7 @@ const App: React.FC = () => {
                             {selectedAccount && (
                                 <IntelligencePanel
                                     account={selectedAccount}
+                                    currency={settings.currency}
                                     onInvestigate={(acc) => {
                                         setSearchQuery(acc.id);
                                         setCurrentPage('search');
@@ -409,6 +438,7 @@ const App: React.FC = () => {
                             <div className="xl:hidden absolute right-4 top-4 bottom-4 z-30 flex w-full max-w-sm bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden transition-all animate-in slide-in-from-right">
                                 <IntelligencePanel
                                     account={selectedAccount}
+                                    currency={settings.currency}
                                     onInvestigate={(acc) => {
                                         setSearchQuery(acc.id);
                                         setCurrentPage('search');
@@ -423,6 +453,9 @@ const App: React.FC = () => {
                     <ProfileModal
                         isOpen={isProfileOpen}
                         onClose={() => setIsProfileOpen(false)}
+                        isGhostMode={settings.ghostMode}
+                        profile={userProfile}
+                        onUpdateProfile={setUserProfile}
                     />
 
                     <SettingsModal

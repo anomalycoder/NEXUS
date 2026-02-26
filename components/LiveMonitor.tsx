@@ -22,7 +22,9 @@ interface TimelineEvent {
   transactions: Transaction[];
 }
 
-const LiveMonitor: React.FC = () => {
+import { formatCurrency } from '../utils';
+
+const LiveMonitor: React.FC<{ currency: string }> = ({ currency }) => {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<TimelineEvent | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
@@ -34,7 +36,7 @@ const LiveMonitor: React.FC = () => {
     return Array.from({ length: Math.floor(Math.random() * 4) + 2 }).map((_, i) => ({
       id: `TXN-${Math.floor(Math.random() * 90000) + 10000}`,
       time: new Date(Date.now() - Math.floor(Math.random() * 100000)).toISOString().split('T')[1].slice(0, 8),
-      amount: `$${(Math.random() * 50000 + 5000).toFixed(2)}`,
+      amount: (Math.random() * 50000 + 5000).toFixed(2),
       sender: accounts[i % accounts.length] || 'Unknown',
       receiver: `Shell Co ${Math.floor(Math.random() * 99)}`,
       type: Math.random() > 0.6 ? 'Crypto' : 'Wire',
@@ -45,9 +47,12 @@ const LiveMonitor: React.FC = () => {
   // Animation Loop
   useEffect(() => {
     const loop = (time: number) => {
+      const isReducedMotion = document.documentElement.classList.contains('reduce-motion');
+
       // 1. Scroll events to the left
       setEvents(prev => {
-        const speed = 0.15; // Speed of time
+        const speed = isReducedMotion ? 0 : 0.15; // Stop moving if reduced motion
+
         // Move existing events, remove old ones
         const nextEvents = prev
           .map(e => ({ ...e, x: e.x - speed }))
@@ -262,7 +267,7 @@ const LiveMonitor: React.FC = () => {
                 <div className="bg-black/40 p-3 border border-slate-800 rounded">
                   <div className="text-[10px] text-slate-500 uppercase mb-1">Total Volume</div>
                   <div className="text-xl text-slate-200 font-mono">
-                    {selectedEvent.transactions.reduce((acc, t) => acc + parseFloat(t.amount.replace('$', '')), 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                    {formatCurrency(selectedEvent.transactions.reduce((acc, t) => acc + parseFloat(t.amount), 0), currency)}
                   </div>
                 </div>
                 <div className="bg-black/40 p-3 border border-slate-800 rounded">
@@ -306,7 +311,7 @@ const LiveMonitor: React.FC = () => {
                           {txn.sender}
                         </td>
                         <td className="p-3 text-slate-400">{txn.receiver}</td>
-                        <td className="p-3 text-white font-bold">{txn.amount}</td>
+                        <td className="p-3 text-white font-bold">{formatCurrency(parseFloat(txn.amount), currency)}</td>
                         <td className="p-3 text-right">
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500 border border-rose-500/20">
                             <AlertTriangle size={10} /> {txn.status}

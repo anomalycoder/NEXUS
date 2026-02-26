@@ -1,14 +1,16 @@
 import React from 'react';
 import { Account } from '../types';
 import { Activity, ShieldAlert, Cpu, Search, X, Hash, Globe, User, ScanLine, ArrowUpRight } from 'lucide-react';
+import { formatCurrency } from '../utils';
 
 interface IntelligencePanelProps {
   account: Account | undefined;
   onInvestigate: (account: Account) => void;
   onClose?: () => void;
+  currency: string;
 }
 
-const IntelligencePanel: React.FC<IntelligencePanelProps> = ({ account, onInvestigate, onClose }) => {
+const IntelligencePanel: React.FC<IntelligencePanelProps> = ({ account, onInvestigate, onClose, currency }) => {
   if (!account) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-white/20 p-6 text-center bg-white/90 dark:bg-black/40 backdrop-blur-xl border-l border-slate-200 dark:border-white/5 rounded-l-3xl">
@@ -75,9 +77,9 @@ const IntelligencePanel: React.FC<IntelligencePanelProps> = ({ account, onInvest
         </h3>
 
         <div className="space-y-3">
-          <DataRow icon={<Activity size={14} />} label="Net Volume" value={account.volume} />
-          <DataRow icon={<ArrowUpRight size={14} />} label="Max Transaction" value={`₹${Math.max(0, ...account.history.map(h => h.amount)).toFixed(2)}`} />
-          <DataRow icon={<Activity size={14} />} label="Avg Transaction" value={`₹${(account.history.reduce((a, b) => a + b.amount, 0) / (account.history.length || 1)).toFixed(2)}`} />
+          <DataRow icon={<Activity size={14} />} label="Net Volume" value={formatCurrency(account.volumeValue, currency)} />
+          <DataRow icon={<ArrowUpRight size={14} />} label="Max Transaction" value={formatCurrency(Math.max(0, ...account.history.map(h => h.amount)), currency)} />
+          <DataRow icon={<Activity size={14} />} label="Avg Transaction" value={formatCurrency((account.history.reduce((a, b) => a + b.amount, 0) / (account.history.length || 1)), currency)} />
           <DataRow icon={<ShieldAlert size={14} />} label="Flagged Txns" value={`${account.history.filter(h => h.isSpike).length}`} />
         </div>
 

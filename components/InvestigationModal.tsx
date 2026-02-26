@@ -6,9 +6,12 @@ interface InvestigationModalProps {
     isOpen: boolean;
     onClose: () => void;
     accounts: Account[]; // The full database
+    currency: string;
 }
 
-const InvestigationModal: React.FC<InvestigationModalProps> = ({ isOpen, onClose, accounts }) => {
+import { formatCurrency } from '../utils';
+
+const InvestigationModal: React.FC<InvestigationModalProps> = ({ isOpen, onClose, accounts, currency }) => {
     const [riskThreshold, setRiskThreshold] = useState(80);
 
     if (!isOpen) return null;
@@ -74,7 +77,7 @@ const InvestigationModal: React.FC<InvestigationModalProps> = ({ isOpen, onClose
                             <th className="p-4 border-b border-slate-800 bg-slate-950">User ID</th>
                             <th className="p-4 border-b border-slate-800 bg-slate-950">Txn Ref</th>
                             <th className="p-4 border-b border-slate-800 bg-slate-950">IP Address</th>
-                            <th className="p-4 border-b border-slate-800 bg-slate-950">Volume (INR)</th>
+                            <th className="p-4 border-b border-slate-800 bg-slate-950">Volume ({currency})</th>
                             <th className="p-4 border-b border-slate-800 bg-slate-950">Connections</th>
                         </tr>
                     </thead>
@@ -97,7 +100,7 @@ const InvestigationModal: React.FC<InvestigationModalProps> = ({ isOpen, onClose
                                 <td className="p-4 text-slate-500">{acc.userId}</td>
                                 <td className="p-4 text-slate-500">{acc.transactionId}</td>
                                 <td className="p-4 text-indigo-400">{acc.ipAddress}</td>
-                                <td className="p-4 text-white font-bold tracking-wide">{acc.volume}</td>
+                                <td className="p-4 text-white font-bold tracking-wide">{formatCurrency(acc.volumeValue, currency)}</td>
                                 <td className="p-4 text-slate-400">{acc.connections.length}</td>
                             </tr>
                         ))}

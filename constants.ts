@@ -12,18 +12,15 @@ const generateRingCoords = (index: number, total: number, centerX: number, cente
 // Helper to generate mock history
 const generateHistory = (isRisk: boolean): TransactionHistoryItem[] => {
     return Array.from({ length: 20 }).map((_, i) => {
-        // Base amount in Crores
-        let val = Math.random() * 4; // 0-4 Cr normally
-
-        // Occasional spike logic
+        let val = Math.random() * 40000000;
         const isSpike = Math.random() > 0.85;
-        if (isSpike) val += (Math.random() * 8 + 6); // Push it towards 10-14 Cr
-        if (!isRisk) val = val * 0.2; // Lower volume for safe accounts
+        if (isSpike) val += (Math.random() * 80000000 + 60000000);
+        if (!isRisk) val = val * 0.2;
 
         return {
             date: `T-${20 - i}`,
             amount: parseFloat(val.toFixed(2)),
-            isSpike: val > 10 // Threshold for visual spike
+            isSpike: val > 100000000
         };
     });
 };
@@ -53,8 +50,7 @@ const generateAccounts = (): Account[] => {
             const coords = generateRingCoords(i, ring.count, ring.x, ring.y, ring.r);
             const id = `NODE-${totalCount++}`;
 
-            // Volume: INR up to 15Cr
-            const volVal = (Math.random() * 12 + 1).toFixed(2);
+            const volVal = (Math.random() * 120000000 + 10000000).toFixed(2);
 
             accounts.push({
                 id,
@@ -67,7 +63,7 @@ const generateAccounts = (): Account[] => {
                 riskScore: 85 + Math.floor(Math.random() * 15), // High Risk
                 status: 'Flagged',
 
-                volume: `₹${volVal}`,
+                volume: ``,
                 volumeValue: parseFloat(volVal),
                 flagCount: 5 + Math.floor(Math.random() * 10),
                 lastActive: 'Now',
@@ -87,7 +83,7 @@ const generateAccounts = (): Account[] => {
         const isRisk = Math.random() > 0.90;
         const x = Math.random() * width;
         const y = Math.random() * height;
-        const volVal = (Math.random() * 6 + 0.1).toFixed(2);
+        const volVal = (Math.random() * 60000000 + 1000000).toFixed(2);
 
         accounts.push({
             id: `NODE-${totalCount++}`,
@@ -100,7 +96,7 @@ const generateAccounts = (): Account[] => {
             riskScore: isRisk ? 80 + Math.floor(Math.random() * 19) : Math.floor(Math.random() * 40),
             status: isRisk ? 'Flagged' : 'Safe',
 
-            volume: `₹${volVal}`,
+            volume: ``,
             volumeValue: parseFloat(volVal),
             flagCount: isRisk ? Math.floor(Math.random() * 5) : 0,
             lastActive: `${Math.floor(Math.random() * 10)}m ago`,

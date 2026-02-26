@@ -54,17 +54,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, onProfileCli
         />
       </nav>
 
-      {/* User Mini Profile */}
-      <div className="mt-auto mb-6">
-        <button
-          onClick={onProfileClick}
-          className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-rose-500 p-[1px] hover:scale-110 transition-transform duration-300"
-        >
-          <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center">
-            <span className="text-[10px] font-bold text-slate-900 dark:text-white">JD</span>
-          </div>
-        </button>
-      </div>
     </div>
   );
 };

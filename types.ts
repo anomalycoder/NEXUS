@@ -2,6 +2,14 @@ export type AccountStatus = 'Active' | 'Frozen' | 'Flagged' | 'Safe';
 
 export type Page = 'dashboard' | 'investigation' | 'settings' | 'search' | 'network' | 'workflow';
 
+export interface UserProfile {
+  name: string;
+  role: string;
+  id: string;
+  clearance: string;
+  image: string | null;
+}
+
 export interface TransactionHistoryItem {
   date: string;
   amount: number;
