@@ -29,13 +29,21 @@ const App: React.FC = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
     // User Profile State
-    const [userProfile, setUserProfile] = useState<UserProfile>({
-        name: 'Vigilante',
-        role: 'Lead Security Analyst',
-        id: 'NEX-8829-ALPHA',
-        clearance: 'Level 5 Administrator',
-        image: null
+    const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+        const saved = localStorage.getItem('nexusUserProfile');
+        if (saved) return JSON.parse(saved);
+        return {
+            name: 'Vigilante',
+            role: 'Lead Security Analyst',
+            id: 'NEX-8829-ALPHA',
+            clearance: 'Level 5 Administrator',
+            image: null
+        };
     });
+
+    useEffect(() => {
+        localStorage.setItem('nexusUserProfile', JSON.stringify(userProfile));
+    }, [userProfile]);
 
     // Settings State
     const [settings, setSettings] = useState({
